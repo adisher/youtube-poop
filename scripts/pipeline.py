@@ -118,19 +118,27 @@ def commit_to_gh_pages(filename: str, content: str):
     remote = f"https://x-access-token:{pat}@github.com/{repo}.git"
 
     def git(*args, cwd=None):
-        subprocess.run(["git"] + list(args), cwd=cwd, check=True, capture_output=True)
+        result = subprocess.run(
+            ["git"] + list(args), cwd=cwd,
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            # Surface stderr so failures are actually debuggable
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args,
+                output=result.stdout, stderr=result.stderr,
+            )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Clone gh-pages; create as orphan if the branch doesn't exist yet
         result = subprocess.run(
             ["git", "clone", "--branch", "gh-pages", "--depth", "1", remote, tmpdir],
-            capture_output=True,
+            capture_output=True, text=True,
         )
         if result.returncode != 0:
             git("init", cwd=tmpdir)
             git("remote", "add", "origin", remote, cwd=tmpdir)
             git("checkout", "--orphan", "gh-pages", cwd=tmpdir)
-            # Seed index.html so the branch has at least one file
             (Path(tmpdir) / "index.html").write_text(
                 "<html><body>LLM Shorts Review</body></html>", encoding="utf-8"
             )
@@ -147,7 +155,20 @@ def commit_to_gh_pages(filename: str, content: str):
 
         git("add", filename, cwd=tmpdir)
         git("commit", "-m", f"review: {filename}", cwd=tmpdir)
-        git("push", remote, "gh-pages", cwd=tmpdir)
+
+        # Push; if rejected (non-fast-forward from a concurrent run),
+        # rebase onto the updated remote and retry once.
+        for attempt in range(2):
+            try:
+                git("push", remote, "gh-pages", cwd=tmpdir)
+                break
+            except subprocess.CalledProcessError as e:
+                if attempt == 0 and "non-fast-forward" in (e.stderr or ""):
+                    print("  ⟳ non-fast-forward, rebasing and retrying push...")
+                    git("fetch", remote, "gh-pages", cwd=tmpdir)
+                    git("rebase", "FETCH_HEAD", cwd=tmpdir)
+                else:
+                    raise
 
 
 def send_email(title: str, review_url: str):
