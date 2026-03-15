@@ -1,0 +1,64 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    - cron: "30 15 * * *"   # 10:30 AM ET (EST)
+    - cron: "0 23 * * *"    # 06:00 PM ET (EST)
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "morning or evening"
+        default: "morning"
+      topic:
+        description: "Topic ID (blank = random)"
+        default: ""
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          pip install Pillow numpy --quiet
+
+      - name: Detect slot
+        id: slot
+        run: |
+          if [ -n "${{ github.event.inputs.slot }}" ]; then
+            echo "slot=${{ github.event.inputs.slot }}" >> $GITHUB_OUTPUT
+          else
+            HOUR=$(date -u +%H)
+            [ "$HOUR" = "15" ] && echo "slot=morning" >> $GITHUB_OUTPUT || echo "slot=evening" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate & email
+        id: gen
+        env:
+          GMAIL_ADDRESS:   ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL:    ${{ secrets.NOTIFY_EMAIL }}
+          GH_PAT:          ${{ secrets.GH_PAT }}
+          GH_REPO:         ${{ github.repository }}
+          PIPELINE_SECRET: ${{ secrets.PIPELINE_SECRET }}
+          GITHUB_RUN_ID:   ${{ github.run_id }}
+        run: |
+          TOPIC_ARG=""
+          [ -n "${{ github.event.inputs.topic }}" ] && TOPIC_ARG="--topic ${{ github.event.inputs.topic }}"
+          OUT=$(python3 scripts/pipeline.py --slot ${{ steps.slot.outputs.slot }} $TOPIC_ARG)
+          echo "$OUT"
+          # Extract output dir from last KIT_DIR= line
+          KIT_DIR=$(echo "$OUT" | grep "^KIT_DIR=" | tail -1 | cut -d= -f2)
+          echo "kit_dir=$KIT_DIR" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.run_id }}
+          path: ${{ steps.gen.outputs.kit_dir }}
+          retention-days: 1

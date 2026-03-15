@@ -1,0 +1,40 @@
+name: Publish Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "GitHub run ID of the pipeline that generated this video"
+        required: true
+      sig:
+        description: "HMAC signature"
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: video-${{ github.event.inputs.run_id }}
+          path: /tmp/artifact
+          github-token: ${{ secrets.GH_PAT }}
+          run-id: ${{ github.event.inputs.run_id }}
+
+      - name: Upload to YouTube & confirm
+        env:
+          YOUTUBE_CLIENT_ID:     ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          GMAIL_ADDRESS:         ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD:    ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL:          ${{ secrets.NOTIFY_EMAIL }}
+          PIPELINE_SECRET:       ${{ secrets.PIPELINE_SECRET }}
+          RUN_ID:                ${{ github.event.inputs.run_id }}
+          SIG:                   ${{ github.event.inputs.sig }}
+        run: pip install Pillow numpy --quiet && python3 scripts/publish.py
