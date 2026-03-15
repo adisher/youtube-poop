@@ -6,7 +6,7 @@ LLM Shorts — Pipeline
 3. Emails you the review link
 """
 
-import os, sys, json, random, smtplib, ssl, hmac, hashlib, base64, time, urllib.request, urllib.error
+import os, sys, json, random, smtplib, ssl, hmac, hashlib, base64, subprocess, tempfile, urllib.request, urllib.error
 from email.mime.multipart import MIMEMultipart
 from email.mime.text      import MIMEText
 from datetime             import datetime, timezone
@@ -111,99 +111,43 @@ async function go(workflow) {{
 </html>"""
 
 
-def _get_file_sha(url: str, headers: dict) -> str | None:
-    """Fetch the current SHA of a file on gh-pages (or None if missing)."""
-    try:
-        req = urllib.request.Request(f"{url}?ref=gh-pages", headers=headers)
-        with urllib.request.urlopen(req) as r:
-            return json.loads(r.read()).get("sha")
-    except urllib.error.HTTPError:
-        return None
+def commit_to_gh_pages(filename: str, content: str):
+    """Clone gh-pages, write the file, commit, and push using git."""
+    pat    = os.environ["GH_PAT"]
+    repo   = os.environ["GH_REPO"]
+    remote = f"https://x-access-token:{pat}@github.com/{repo}.git"
 
+    def git(*args, cwd=None):
+        subprocess.run(["git"] + list(args), cwd=cwd, check=True, capture_output=True)
 
-def commit_to_gh_pages(filename: str, content: str, retries: int = 3):
-    """Commit a file to the gh-pages branch via GitHub API.
-
-    Retries on 409 Conflict (stale SHA) by re-fetching the file SHA.
-    """
-    pat = os.environ["GH_PAT"]
-    repo = os.environ["GH_REPO"]
-    url = f"https://api.github.com/repos/{repo}/contents/{filename}"
-
-    encoded = base64.b64encode(content.encode()).decode()
-
-    headers = {
-        "Authorization": f"token {pat}",
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-    }
-
-    for attempt in range(1, retries + 1):
-        sha = _get_file_sha(url, headers)
-
-        body = {
-            "message": f"review: {filename}",
-            "content": encoded,
-            "branch": "gh-pages",
-        }
-        if sha:
-            body["sha"] = sha
-
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode(),
-            headers=headers,
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Clone gh-pages; create as orphan if the branch doesn't exist yet
+        result = subprocess.run(
+            ["git", "clone", "--branch", "gh-pages", "--depth", "1", remote, tmpdir],
+            capture_output=True,
         )
-        req.get_method = lambda: "PUT"
-        try:
-            with urllib.request.urlopen(req) as r:
-                json.loads(r.read())
-            return
-        except urllib.error.HTTPError as e:
-            if e.code == 409 and attempt < retries:
-                wait = attempt * 2
-                print(f"  ⟳ 409 Conflict (attempt {attempt}/{retries}), retrying in {wait}s...")
-                time.sleep(wait)
-            else:
-                raise
+        if result.returncode != 0:
+            git("init", cwd=tmpdir)
+            git("remote", "add", "origin", remote, cwd=tmpdir)
+            git("checkout", "--orphan", "gh-pages", cwd=tmpdir)
+            # Seed index.html so the branch has at least one file
+            (Path(tmpdir) / "index.html").write_text(
+                "<html><body>LLM Shorts Review</body></html>", encoding="utf-8"
+            )
+            git("add", "index.html", cwd=tmpdir)
+            git("-c", "user.email=bot@llm-shorts", "-c", "user.name=LLM Shorts Bot",
+                "commit", "-m", "init gh-pages", cwd=tmpdir)
 
+        git("config", "user.email", "bot@llm-shorts", cwd=tmpdir)
+        git("config", "user.name",  "LLM Shorts Bot",  cwd=tmpdir)
 
-def ensure_gh_pages_index():
-    """Make sure gh-pages has an index.html so the branch is valid."""
-    pat  = os.environ["GH_PAT"]
-    repo = os.environ["GH_REPO"]
-    url  = f"https://api.github.com/repos/{repo}/contents/index.html"
+        dest = Path(tmpdir) / filename
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content, encoding="utf-8")
 
-    # Check if already exists
-    try:
-        req = urllib.request.Request(
-            url + "?ref=gh-pages",
-            headers={"Authorization": f"token {pat}",
-                     "Accept": "application/vnd.github+json"})
-        with urllib.request.urlopen(req):
-            return  # already exists
-    except urllib.error.HTTPError:
-        pass
-
-    # Create minimal index
-    content = base64.b64encode(b"<html><body>LLM Shorts Review</body></html>").decode()
-    body = {"message": "init gh-pages", "content": content, "branch": "gh-pages"}
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode(),
-        headers={
-            "Authorization": f"token {pat}",
-            "Accept":        "application/vnd.github+json",
-            "Content-Type":  "application/json",
-        }
-    )
-    req.get_method = lambda: "PUT"
-    try:
-        with urllib.request.urlopen(req):
-            print("  ✓ gh-pages branch initialised")
-    except urllib.error.HTTPError as e:
-        # Branch may not exist yet — create it first
-        print(f"  ! gh-pages init: {e.code} — branch may need manual creation (see README)")
+        git("add", filename, cwd=tmpdir)
+        git("commit", "-m", f"review: {filename}", cwd=tmpdir)
+        git("push", remote, "gh-pages", cwd=tmpdir)
 
 
 def send_email(title: str, review_url: str):
@@ -278,7 +222,6 @@ def run(slot: str, topic_id: str | None = None):
 
     # 4. Commit to gh-pages
     print("\n📄 Committing review page to gh-pages...")
-    ensure_gh_pages_index()
     filename = f"review/{run_id}.html"
     commit_to_gh_pages(filename, review_html)
     review_url = f"https://{owner}.github.io/{repo_name}/{filename}"
