@@ -6,7 +6,7 @@ LLM Shorts — Pipeline
 3. Emails you the review link
 """
 
-import os, sys, json, random, smtplib, ssl, hmac, hashlib, base64, urllib.request, urllib.error
+import os, sys, json, random, smtplib, ssl, hmac, hashlib, base64, time, urllib.request, urllib.error
 from email.mime.multipart import MIMEMultipart
 from email.mime.text      import MIMEText
 from datetime             import datetime, timezone
@@ -111,8 +111,21 @@ async function go(workflow) {{
 </html>"""
 
 
-def commit_to_gh_pages(filename: str, content: str):
-    """Commit a file to the gh-pages branch via GitHub API."""
+def _get_file_sha(url: str, headers: dict) -> str | None:
+    """Fetch the current SHA of a file on gh-pages (or None if missing)."""
+    try:
+        req = urllib.request.Request(f"{url}?ref=gh-pages", headers=headers)
+        with urllib.request.urlopen(req) as r:
+            return json.loads(r.read()).get("sha")
+    except urllib.error.HTTPError:
+        return None
+
+
+def commit_to_gh_pages(filename: str, content: str, retries: int = 3):
+    """Commit a file to the gh-pages branch via GitHub API.
+
+    Retries on 409 Conflict (stale SHA) by re-fetching the file SHA.
+    """
     pat = os.environ["GH_PAT"]
     repo = os.environ["GH_REPO"]
     url = f"https://api.github.com/repos/{repo}/contents/{filename}"
@@ -125,31 +138,34 @@ def commit_to_gh_pages(filename: str, content: str):
         "Content-Type": "application/json",
     }
 
-    # Get existing sha — MUST specify ?ref=gh-pages
-    sha = None
-    try:
-        req = urllib.request.Request(f"{url}?ref=gh-pages", headers=headers)
-        with urllib.request.urlopen(req) as r:
-            sha = json.loads(r.read()).get("sha")
-    except urllib.error.HTTPError:
-        pass  # file doesn't exist yet, that's fine
+    for attempt in range(1, retries + 1):
+        sha = _get_file_sha(url, headers)
 
-    body = {
-        "message": f"review: {filename}",
-        "content": encoded,
-        "branch": "gh-pages",
-    }
-    if sha:
-        body["sha"] = sha
+        body = {
+            "message": f"review: {filename}",
+            "content": encoded,
+            "branch": "gh-pages",
+        }
+        if sha:
+            body["sha"] = sha
 
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode(),
-        headers=headers,
-    )
-    req.get_method = lambda: "PUT"
-    with urllib.request.urlopen(req) as r:
-        json.loads(r.read())
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode(),
+            headers=headers,
+        )
+        req.get_method = lambda: "PUT"
+        try:
+            with urllib.request.urlopen(req) as r:
+                json.loads(r.read())
+            return
+        except urllib.error.HTTPError as e:
+            if e.code == 409 and attempt < retries:
+                wait = attempt * 2
+                print(f"  ⟳ 409 Conflict (attempt {attempt}/{retries}), retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise
 
 
 def ensure_gh_pages_index():
