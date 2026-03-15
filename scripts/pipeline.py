@@ -123,7 +123,10 @@ def commit_to_gh_pages(filename: str, content: str):
             capture_output=True, text=True,
         )
         if result.returncode != 0:
-            # Surface stderr so failures are actually debuggable
+            if result.stdout.strip():
+                print(f"  git stdout: {result.stdout.strip()}", flush=True)
+            if result.stderr.strip():
+                print(f"  git stderr: {result.stderr.strip()}", flush=True)
             raise subprocess.CalledProcessError(
                 result.returncode, result.args,
                 output=result.stdout, stderr=result.stderr,
