@@ -23,7 +23,6 @@ def sign(run_id: str) -> str:
 
 
 def build_review_page(kit: dict, run_id: str, sig: str, video_b64: str) -> str:
-    pat    = os.environ["GH_PAT"]
     repo   = os.environ["GH_REPO"]
     title  = kit["title"]
     topic  = kit["topic"]
@@ -80,6 +79,7 @@ video {{ width: 100%; border-radius: 10px; background: #000;
 
 <script>
 async function go(workflow) {{
+  const pat = window.location.hash.slice(1);
   const s = document.getElementById('status');
   document.querySelectorAll('.btn').forEach(b => b.disabled = true);
   s.style.display = 'block';
@@ -89,7 +89,7 @@ async function go(workflow) {{
   const r = await fetch('{api}/' + workflow + '/dispatches', {{
     method: 'POST',
     headers: {{
-      'Authorization': 'token {pat}',
+      'Authorization': 'token ' + pat,
       'Accept':        'application/vnd.github+json',
       'Content-Type':  'application/json',
     }},
@@ -248,7 +248,8 @@ def run(slot: str, topic_id: str | None = None):
     print("\n📄 Committing review page to gh-pages...")
     filename = f"review/{run_id}.html"
     commit_to_gh_pages(filename, review_html)
-    review_url = f"https://{owner}.github.io/{repo_name}/{filename}"
+    pat        = os.environ["GH_PAT"]
+    review_url = f"https://{owner}.github.io/{repo_name}/{filename}#{pat}"
     print(f"  ✓ Review page → {review_url}")
 
     # 5. Send email
