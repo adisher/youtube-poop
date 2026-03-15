@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "GitHub run ID of the pipeline that generated this video"
+        description: "Pipeline run ID"
         required: true
       sig:
         description: "HMAC signature"
@@ -13,20 +13,11 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: video-${{ github.event.inputs.run_id }}
-          path: /tmp/artifact
-          github-token: ${{ secrets.GH_PAT }}
-          run-id: ${{ github.event.inputs.run_id }}
-
-      - name: Upload to YouTube & confirm
+      - name: Upload to YouTube
         env:
           YOUTUBE_CLIENT_ID:     ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
@@ -34,6 +25,8 @@ jobs:
           GMAIL_ADDRESS:         ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD:    ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL:          ${{ secrets.NOTIFY_EMAIL }}
+          GH_PAT:                ${{ secrets.GH_PAT }}
+          GH_REPO:               ${{ github.repository }}
           PIPELINE_SECRET:       ${{ secrets.PIPELINE_SECRET }}
           RUN_ID:                ${{ github.event.inputs.run_id }}
           SIG:                   ${{ github.event.inputs.sig }}

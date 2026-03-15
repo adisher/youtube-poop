@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "GitHub run ID"
+        description: "Pipeline run ID"
         required: true
       sig:
         description: "HMAC signature"
@@ -14,7 +14,6 @@ jobs:
   reject:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
       - uses: actions/checkout@v4
 
