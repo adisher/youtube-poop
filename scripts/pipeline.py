@@ -113,28 +113,31 @@ async function go(workflow) {{
 
 def commit_to_gh_pages(filename: str, content: str):
     """Commit a file to the gh-pages branch via GitHub API."""
-    pat  = os.environ["GH_PAT"]
+    pat = os.environ["GH_PAT"]
     repo = os.environ["GH_REPO"]
-    url  = f"https://api.github.com/repos/{repo}/contents/{filename}"
+    url = f"https://api.github.com/repos/{repo}/contents/{filename}"
 
     encoded = base64.b64encode(content.encode()).decode()
 
-    # Get existing sha if file exists
+    headers = {
+        "Authorization": f"token {pat}",
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+    }
+
+    # Get existing sha — MUST specify ?ref=gh-pages
     sha = None
     try:
-        req = urllib.request.Request(
-            url + "?ref=gh-pages",
-            headers={"Authorization": f"token {pat}",
-                     "Accept": "application/vnd.github+json"})
+        req = urllib.request.Request(f"{url}?ref=gh-pages", headers=headers)
         with urllib.request.urlopen(req) as r:
             sha = json.loads(r.read()).get("sha")
     except urllib.error.HTTPError:
-        pass
+        pass  # file doesn't exist yet, that's fine
 
     body = {
         "message": f"review: {filename}",
         "content": encoded,
-        "branch":  "gh-pages",
+        "branch": "gh-pages",
     }
     if sha:
         body["sha"] = sha
@@ -142,11 +145,7 @@ def commit_to_gh_pages(filename: str, content: str):
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode(),
-        headers={
-            "Authorization": f"token {pat}",
-            "Accept":        "application/vnd.github+json",
-            "Content-Type":  "application/json",
-        }
+        headers=headers,
     )
     req.get_method = lambda: "PUT"
     with urllib.request.urlopen(req) as r:
