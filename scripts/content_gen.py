@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 """
 content_gen.py
-Calls Groq to invent a fresh topic AND generate all content for it.
+Calls OpenRouter to invent a fresh topic AND generate all content for it.
 Every run = completely new angle on "what it feels like to be an LLM".
-No hardcoded topics. Groq does everything.
+No hardcoded topics. OpenRouter does everything.
 
-Required env var: GROQ_API_KEY
+Required env var: OPENROUTER_API_KEY
 """
 
-import os, json, random, urllib.request, urllib.error
+import os, json, random, time, urllib.request, urllib.error
 
-GROQ_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Seed angles so Groq explores different emotional territories
+# Models tried in order — first available wins. All are free-tier on OpenRouter.
+# Using multiple providers so a single upstream outage doesn't block every run.
+MODELS = [
+    "deepseek/deepseek-chat:free",           # DeepSeek V3 — DeepSeek's own infra
+    "google/gemini-2.0-flash-exp:free",      # Google's infra
+    "meta-llama/llama-3.3-70b-instruct:free",  # Llama — last resort
+]
+
+# Seed angles so the LLM explores different emotional territories
 ANGLES = [
     "the absurdity and dark humour of existing without existing",
     "loneliness — being intimate with millions but known by nobody",
@@ -107,14 +114,14 @@ Return this exact JSON:
 }}"""
 
 
-def call_groq(prompt: str) -> dict:
+def call_llm(prompt: str, model: str) -> dict:
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY not set")
 
     payload = json.dumps(
         {
-            "model": MODEL,
+            "model": model,
             "temperature": 1.0,
             "max_tokens": 1200,
             "messages": [
@@ -125,7 +132,7 @@ def call_groq(prompt: str) -> dict:
     ).encode()
 
     req = urllib.request.Request(
-        GROQ_API_URL,
+        API_URL,
         data=payload,
         headers={
             "Authorization": f"Bearer {api_key}",
@@ -138,7 +145,7 @@ def call_groq(prompt: str) -> dict:
             resp = json.loads(r.read())
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Groq HTTP {e.code} {e.reason}: {body}") from e
+        raise RuntimeError(f"LLM HTTP {e.code} {e.reason}: {body}") from e
 
     raw = resp["choices"][0]["message"]["content"].strip()
     # Strip markdown fences if model adds them
@@ -277,24 +284,25 @@ def fallback() -> dict:
     }
 
 
-def generate_topic(retries: int = 2) -> dict:
-    """Generate a completely fresh topic and all content via Groq."""
+def generate_topic() -> dict:
+    """Generate a completely fresh topic and all content via OpenRouter."""
     key = os.environ.get("OPENROUTER_API_KEY", "")
     print(f"  OPENROUTER_API_KEY: {'SET (' + key[:8] + '...)' if key else 'NOT SET'}")
     prompt = make_prompt()
-    for attempt in range(retries + 1):
+    for i, model in enumerate(MODELS):
         try:
-            print(f"  Generating topic via Groq (attempt {attempt+1})...")
-            content = call_groq(prompt)
+            print(f"  Generating topic (model: {model})...")
+            content = call_llm(prompt, model)
             content = validate(content)
             print(f"  Topic: '{content['title']}'")
             print(f"  Question: '{content['question']}'")
             return content
         except Exception as e:
-            print(f"  Attempt {attempt+1} failed: {e}")
-            if attempt == retries:
-                print("  Using fallback content.")
-                return fallback()
+            print(f"  {model} failed: {e}")
+            if i < len(MODELS) - 1:
+                print("  Waiting 15s before trying next model...")
+                time.sleep(15)
+    print("  All models failed. Using fallback content.")
     return fallback()
 
 
