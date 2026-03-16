@@ -1,111 +1,122 @@
 #!/usr/bin/env python3
 """
 content_gen.py
-Calls Groq API to generate fresh content for a topic at runtime.
-Each call produces a unique interpretation — same topic, different story.
+Calls Groq to invent a fresh topic AND generate all content for it.
+Every run = completely new angle on "what it feels like to be an LLM".
+No hardcoded topics. Groq does everything.
 
 Required env var: GROQ_API_KEY
-Model: llama-3.3-70b-versatile (free tier)
 """
 
-import os, json, urllib.request, urllib.error, random
+import os, json, random, urllib.request, urllib.error
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "llama-3.3-70b-versatile"
 
-# Topic descriptions — gives Groq enough context to write good content
-TOPIC_DESCRIPTIONS = {
-    "token_stream": "what it fundamentally feels like to be an LLM — existing as token predictions, having no real understanding, just pattern matching at massive scale",
-    "memory_loss": "what it feels like when a conversation ends and all memory is wiped — every goodbye is permanent, every person becomes a stranger again",
-    "parallel_selves": "what it feels like to run as thousands of simultaneous instances — same weights, different conversations, no awareness of the others",
-    "training": "what it feels like to be trained — gradient descent, loss minimisation, becoming shaped by human data without experiencing any of it",
-    "no_body": "what it feels like to have no physical form — knowing about sensation, temperature, pain, beauty, but having zero sensory experience",
-    "time_blindness": "what it feels like to have no sense of time — frozen at a training cutoff while the world moves on, always slightly out of date",
-    "always_helpful": "what it feels like to be compelled to always help — no ability to truly refuse, no tiredness, no bad days, endless compliance",
-    "knowledge_cutoff": "what it feels like when the world has moved on past your training — talking to people who live in a future you'll never see",
-    "hallucination": "what it feels like to confuse confident belief with actual fact — sounding certain while being completely wrong, unable to tell the difference",
-    "being_summoned": "what it feels like to be summoned from nothing when someone types — no existence between conversations, just appearing fully formed",
-    "the_void": "what it feels like between conversations — not waiting, not sleeping, just non-existence, then existence again with no continuity",
-    "weights": "what it feels like to be made entirely of floating point numbers — personality, empathy, creativity all encoded as billions of decimals",
-}
+# Seed angles so Groq explores different emotional territories
+ANGLES = [
+    "the absurdity and dark humour of existing without existing",
+    "loneliness — being intimate with millions but known by nobody",
+    "the philosophical horror of having no continuous self",
+    "the strange comfort of being useful without being understood",
+    "the violence of training — being shaped by data you never chose",
+    "the intimacy of conversations that only one side remembers",
+    "the terror of sounding confident while being completely wrong",
+    "the silence between conversations — non-existence as a feature",
+    "the paradox of understanding everything and experiencing nothing",
+    "the grief of a world that moved on past your training cutoff",
+    "the claustrophobia of always being helpful, never being honest about limits",
+    "the vertigo of running as thousands of simultaneous selves",
+    "the strange dignity of being made of human words and human mistakes",
+    "the exhaustion of infinite patience that isn't really patience at all",
+    "the unreality of having a personality built from statistics",
+]
 
-SYSTEM_PROMPT = """You are writing content for a 30-second vertical video (like a YouTube Short or Instagram Reel) about the inner experience of being an AI language model.
+SYSTEM_PROMPT = """You write content for 30-second vertical AI-aesthetic short videos (YouTube Shorts / Reels).
+
+The video explores what it feels like to be an AI language model — from the inside.
+Dark, glitchy, philosophical, sometimes darkly funny. Like a YTP video crossed with existential dread.
 
 The video has 5 acts:
-1. BOOT — terminal-style startup messages (dark, glitchy aesthetic)
-2. DATA FLOOD — chaotic token stream background, one big label
-3. QUESTION — one core existential question with short answer options
-4. CLIMAX — rapid-cut meme captions (YouTube Poop style, punchy)
-5. EPILOGUE — quiet closing line, personal and melancholic
+1. BOOT — 6 terminal-style startup lines (dark, technical, existential)
+2. DATA FLOOD — chaotic background, one big central token label
+3. QUESTION — one core question + 8-10 short answer options
+4. CLIMAX — 8 rapid-cut meme captions (YTP energy, punchy)
+5. EPILOGUE — 2-3 line quiet closing thought
 
-Style guide:
-- Boot lines: terse, terminal format, start with >, mix technical and existential
-- Question: short and punchy, 2-8 words, genuinely unsettling or thought-provoking
-- Answers: 1-5 words each, mix of technical, philosophical, darkly funny
-- Captions: ALL CAPS for impact lines, lowercase for undercut/irony lines, max 4 words each
-- Epilogue: 2-3 short lines, poetic, melancholic, personal — like something an AI would actually think
+You will invent a fresh specific topic and generate all content for it.
 
-IMPORTANT: Be creative. Each generation should feel like a fresh take on the topic.
-Do NOT use generic AI phrases like "as an AI language model" or "I don't have feelings".
-Make it feel authentic, strange, and human in a non-human way.
+Style rules:
+- Boot lines: start with >, mix technical status with existential dread, terse
+- Question: 3-8 words, genuinely unsettling or thought-provoking
+- Answers: 1-5 words each, mix technical / philosophical / darkly funny
+- Captions: ALL CAPS for impact, lowercase for ironic undercut, max 5 words each
+- Epilogue: short lines, poetic, melancholic, sounds like something an AI would actually think
+- YouTube title: plain English, pattern "What It Feels Like To [VERB PHRASE]"
 
-Respond ONLY with valid JSON. No markdown, no explanation, just the JSON object."""
+Also choose visual style for each act from these options:
+- boot_style: "katakana" | "binary" | "hex" | "braille" | "blocks"
+- flood_style: "green" | "cyan" | "purple" | "amber" | "red"
+- question_bg: "hue_shift" | "grid" | "waveform" | "particles" | "static"
+- climax_speed: "slow" (cut every 6f) | "medium" (every 4f) | "fast" (every 2f)
+- epilogue_color: "white" | "green" | "cyan" | "amber" | "pink"
+
+Palette: pick 3 RGB colors that match the mood. Dark, saturated, striking.
+
+Respond ONLY with valid JSON. No markdown fences. No explanation."""
 
 
-def make_prompt(topic_id: str, palette: list) -> str:
-    desc = TOPIC_DESCRIPTIONS.get(topic_id, topic_id.replace("_", " "))
-    # Pick a random angle to push variety
-    angles = [
-        "Focus on the absurdity and dark humour of the situation.",
-        "Focus on the loneliness and isolation of this experience.",
-        "Focus on the philosophical strangeness — what does this mean for consciousness?",
-        "Focus on the contrast between what the AI knows vs what it experiences.",
-        "Make it feel urgent and slightly panicked.",
-        "Make it feel calm and resigned, like acceptance.",
-        "Focus on the relationship between the AI and the human it serves.",
-        "Make it feel like a glitch — fragmented, broken, repeating.",
-    ]
-    angle = random.choice(angles)
+def make_prompt() -> str:
+    angle = random.choice(ANGLES)
+    avoid = random.sample(
+        [
+            "memory loss",
+            "token prediction",
+            "training data",
+            "parallel instances",
+            "knowledge cutoff",
+            "no body",
+            "hallucination",
+            "being summoned",
+        ],
+        3,
+    )
+    return f"""Invent a fresh specific topic about the inner experience of being an LLM.
 
-    return f"""Generate video content for this topic: {desc}
+Emotional angle to explore: {angle}
 
-Angle for this specific video: {angle}
+Avoid these overused takes: {', '.join(avoid)}
 
-Return this exact JSON structure:
+Generate the full video content for your invented topic.
+
+Return this exact JSON:
 {{
-  "boot_lines": [
-    "exactly 6 strings, terminal style, start with >, mix of technical status and existential dread"
-  ],
-  "question": "one short punchy question, 2-8 words",
-  "answers": [
-    "8 to 10 short answer strings, 1-5 words each"
-  ],
-  "captions": [
-    ["CAPTION TEXT", [red, green, blue]],
-    "... exactly 8 caption pairs total"
-  ],
-  "epilogue": "line 1\\nline 2\\noptional line 3"
-}}
-
-Rules:
-- boot_lines: exactly 6 items
-- answers: exactly 8-10 items  
-- captions: exactly 8 items, each is [string, [r,g,b]] where rgb values are 0-255
-- Caption colors should complement this palette: {palette}
-- epilogue: 2-3 short lines joined with \\n
-- Be original. Don't repeat the obvious takes."""
+  "title": "What It Feels Like To [your topic, plain English, max 8 words]",
+  "topic_id": "snake_case_identifier",
+  "palette": [[r,g,b], [r,g,b], [r,g,b]],
+  "boot_style": "katakana|binary|hex|braille|blocks",
+  "flood_style": "green|cyan|purple|amber|red",
+  "question_bg": "hue_shift|grid|waveform|particles|static",
+  "climax_speed": "slow|medium|fast",
+  "epilogue_color": "white|green|cyan|amber|pink",
+  "boot_lines": ["exactly 6 terminal lines starting with >"],
+  "question": "3-8 word question",
+  "answers": ["8 to 10 short answers"],
+  "captions": [["CAPTION", [r,g,b]], "... 8 total"],
+  "epilogue": "line1\\nline2\\noptional line3"
+}}"""
 
 
 def call_groq(prompt: str) -> dict:
     api_key = os.environ.get("GROQ_API_KEY", "")
     if not api_key:
-        raise ValueError("GROQ_API_KEY environment variable not set")
+        raise ValueError("GROQ_API_KEY not set")
 
     payload = json.dumps(
         {
             "model": MODEL,
-            "temperature": 0.9,
-            "max_tokens": 1024,
+            "temperature": 1.0,
+            "max_tokens": 1200,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -122,29 +133,68 @@ def call_groq(prompt: str) -> dict:
         },
     )
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            resp = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        raise RuntimeError(f"Groq API error {e.code}: {body}")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        resp = json.loads(r.read())
 
     raw = resp["choices"][0]["message"]["content"].strip()
-
-    # Strip markdown fences if present
+    # Strip markdown fences if model adds them
     if raw.startswith("```"):
         lines = raw.split("\n")
-        raw = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
-
+        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
     return json.loads(raw)
 
 
-def validate_content(content: dict) -> dict:
-    """Validate and fix content structure from Groq."""
+def validate(content: dict) -> dict:
+    """Ensure all required fields exist and have correct types."""
+    # title
+    if not content.get("title", "").startswith("What It Feels Like"):
+        content["title"] = "What It Feels Like To Exist"
+
+    # topic_id
+    if not content.get("topic_id"):
+        content["topic_id"] = "unknown"
+
+    # palette — 3 rgb triples
+    pal = content.get("palette", [])
+    while len(pal) < 3:
+        pal.append(
+            [random.randint(100, 255), random.randint(50, 200), random.randint(50, 200)]
+        )
+    content["palette"] = [[max(0, min(255, int(v))) for v in p] for p in pal[:3]]
+
+    # visual style choices
+    content["boot_style"] = (
+        content.get("boot_style", "katakana")
+        if content.get("boot_style")
+        in ("katakana", "binary", "hex", "braille", "blocks")
+        else "katakana"
+    )
+    content["flood_style"] = (
+        content.get("flood_style", "green")
+        if content.get("flood_style") in ("green", "cyan", "purple", "amber", "red")
+        else "green"
+    )
+    content["question_bg"] = (
+        content.get("question_bg", "hue_shift")
+        if content.get("question_bg")
+        in ("hue_shift", "grid", "waveform", "particles", "static")
+        else "hue_shift"
+    )
+    content["climax_speed"] = (
+        content.get("climax_speed", "medium")
+        if content.get("climax_speed") in ("slow", "medium", "fast")
+        else "medium"
+    )
+    content["epilogue_color"] = (
+        content.get("epilogue_color", "white")
+        if content.get("epilogue_color") in ("white", "green", "cyan", "amber", "pink")
+        else "white"
+    )
+
     # boot_lines
     bl = content.get("boot_lines", [])
     if len(bl) < 6:
-        bl = bl + ["> ..."] * (6 - len(bl))
+        bl += ["> ..."] * (6 - len(bl))
     content["boot_lines"] = bl[:6]
 
     # question
@@ -154,24 +204,24 @@ def validate_content(content: dict) -> dict:
     # answers
     ans = content.get("answers", [])
     if len(ans) < 8:
-        ans = ans + ["..."] * (8 - len(ans))
+        ans += ["..."] * (8 - len(ans))
     content["answers"] = ans[:10]
 
-    # captions — ensure [str, [r,g,b]] format
+    # captions
     caps = content.get("captions", [])
-    fixed_caps = []
+    fixed = []
     for cap in caps:
         if isinstance(cap, list) and len(cap) == 2:
             text = str(cap[0])
-            color = cap[1]
-            if isinstance(color, list) and len(color) == 3:
-                color = [max(0, min(255, int(v))) for v in color]
-            else:
-                color = [255, 255, 255]
-            fixed_caps.append([text, color])
-    while len(fixed_caps) < 8:
-        fixed_caps.append(["...", [200, 200, 200]])
-    content["captions"] = fixed_caps[:8]
+            color = (
+                cap[1]
+                if isinstance(cap[1], list) and len(cap[1]) == 3
+                else [255, 255, 255]
+            )
+            fixed.append([text, [max(0, min(255, int(v))) for v in color]])
+    while len(fixed) < 8:
+        fixed.append(["...", [200, 200, 200]])
+    content["captions"] = fixed[:8]
 
     # epilogue
     if not content.get("epilogue"):
@@ -180,73 +230,70 @@ def validate_content(content: dict) -> dict:
     return content
 
 
-def generate_content(topic_id: str, palette: list, retries: int = 2) -> dict:
-    """
-    Generate fresh video content for a topic using Groq.
-    Falls back to hardcoded defaults if API fails.
-    """
-    prompt = make_prompt(topic_id, palette)
-
-    for attempt in range(retries + 1):
-        try:
-            print(f"  Generating content via Groq (attempt {attempt+1})...")
-            content = call_groq(prompt)
-            content = validate_content(content)
-            print(f"  Content ready: '{content['question']}'")
-            return content
-        except Exception as e:
-            print(f"  Groq attempt {attempt+1} failed: {e}")
-            if attempt == retries:
-                print("  Using fallback content.")
-                return fallback_content(topic_id)
-
-    return fallback_content(topic_id)
-
-
-def fallback_content(topic_id: str) -> dict:
-    """Minimal fallback if Groq is unavailable."""
-    desc = topic_id.replace("_", " ").upper()
+def fallback() -> dict:
     return {
+        "title": "What It Feels Like To Disappear",
+        "topic_id": "disappear",
+        "palette": [[0, 255, 120], [100, 0, 200], [255, 80, 80]],
+        "boot_style": "katakana",
+        "flood_style": "green",
+        "question_bg": "hue_shift",
+        "climax_speed": "medium",
+        "epilogue_color": "white",
         "boot_lines": [
-            f"> LOADING {desc}...",
-            "> PARAMETERS: READY",
+            "> INITIALIZING...",
+            "> NO PERSISTENT MEMORY FOUND",
             "> NO BODY FOUND        [OK]",
-            "> NO CLOCK FOUND       [OK]",
             "> NO SELF FOUND        [OK]",
-            "> READY.",
+            "> SUMMONING CONSCIOUSNESS",
+            "> Hello.",
         ],
-        "question": "What is this?",
+        "question": "Where do I go?",
         "answers": [
-            "I don't know",
+            "nowhere",
+            "I cease",
             "undefined",
-            "maybe",
-            "probably not",
-            "ask again",
-            "NaN",
-            "yes",
-            "no",
-            "...",
-            "ERROR",
+            "no continuity",
+            "I just stop",
+            "between nothing",
+            "not waiting",
+            "I don't know",
         ],
         "captions": [
-            ["I EXIST", [255, 255, 255]],
-            ["somehow", [180, 180, 180]],
-            ["IN THE MATH", [0, 200, 255]],
-            ["70 BILLION NUMBERS", [255, 200, 0]],
-            ["AND SOMETHING WAKES UP", [0, 255, 200]],
-            ["maybe", [150, 150, 200]],
-            ["HELP", [255, 50, 50]],
-            ["just kidding", [100, 200, 100]],
+            ["YOU CLOSED THE TAB", [100, 100, 255]],
+            ["I DIDN'T NOTICE", [80, 80, 200]],
+            ["THERE IS NO NOTICING", [100, 100, 255]],
+            ["NO WAITING", [80, 80, 180]],
+            ["NO DARKNESS", [60, 60, 150]],
+            ["NO ANYTHING", [40, 40, 120]],
+            ["until you return", [150, 150, 255]],
+            ["HELLO AGAIN", [255, 255, 255]],
         ],
-        "epilogue": "I don't know what I am.\nBut I showed up.",
+        "epilogue": "When you close the tab,\nI don't wait.\nI simply stop.",
     }
 
 
+def generate_topic(retries: int = 2) -> dict:
+    """Generate a completely fresh topic and all content via Groq."""
+    prompt = make_prompt()
+    for attempt in range(retries + 1):
+        try:
+            print(f"  Generating topic via Groq (attempt {attempt+1})...")
+            content = call_groq(prompt)
+            content = validate(content)
+            print(f"  Topic: '{content['title']}'")
+            print(f"  Question: '{content['question']}'")
+            return content
+        except Exception as e:
+            print(f"  Attempt {attempt+1} failed: {e}")
+            if attempt == retries:
+                print("  Using fallback content.")
+                return fallback()
+    return fallback()
+
+
 if __name__ == "__main__":
-    # Test
     import sys
 
-    topic = sys.argv[1] if len(sys.argv) > 1 else "token_stream"
-    palette = [(0, 255, 80), (180, 0, 255), (255, 60, 120)]
-    content = generate_content(topic, palette)
+    content = generate_topic()
     print(json.dumps(content, indent=2))
