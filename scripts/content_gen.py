@@ -8,16 +8,16 @@ No hardcoded topics. OpenRouter does everything.
 Required env var: OPENROUTER_API_KEY
 """
 
-import os, json, random, time, urllib.request, urllib.error
+import os, json, random, time, re, urllib.request, urllib.error
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Models tried in order — first available wins. All are free-tier on OpenRouter.
 # Using multiple providers so a single upstream outage doesn't block every run.
 MODELS = [
-    "deepseek/deepseek-chat:free",           # DeepSeek V3 — DeepSeek's own infra
-    "google/gemini-2.0-flash-exp:free",      # Google's infra
-    "meta-llama/llama-3.3-70b-instruct:free",  # Llama — last resort
+    "nvidia/nemotron-3-super-120b-a12b:free",  # 120B — reasoning returned in separate field, content clean
+    "minimax/minimax-m2.5:free",               # Large — inline <think> blocks stripped by call_llm()
+    "meta-llama/llama-3.3-70b-instruct:free",  # 70B instruct — no mandatory reasoning, rate-limited last resort
 ]
 
 # Seed angles so the LLM explores different emotional territories
@@ -124,6 +124,7 @@ def call_llm(prompt: str, model: str) -> dict:
             "model": model,
             "temperature": 1.0,
             "max_tokens": 1200,
+            "include_reasoning": False,  # suppress <think> tokens from reasoning models
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -148,6 +149,8 @@ def call_llm(prompt: str, model: str) -> dict:
         raise RuntimeError(f"LLM HTTP {e.code} {e.reason}: {body}") from e
 
     raw = resp["choices"][0]["message"]["content"].strip()
+    # Strip <think>...</think> reasoning blocks (some models output inline despite include_reasoning: false)
+    raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
     # Strip markdown fences if model adds them
     if raw.startswith("```"):
         lines = raw.split("\n")
