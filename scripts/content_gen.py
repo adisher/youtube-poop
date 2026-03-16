@@ -10,8 +10,8 @@ Required env var: GROQ_API_KEY
 
 import os, json, random, urllib.request, urllib.error
 
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "llama-3.3-70b-versatile"
+GROQ_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 # Seed angles so Groq explores different emotional territories
 ANGLES = [
@@ -108,9 +108,9 @@ Return this exact JSON:
 
 
 def call_groq(prompt: str) -> dict:
-    api_key = os.environ.get("GROQ_API_KEY", "")
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
-        raise ValueError("GROQ_API_KEY not set")
+        raise ValueError("OPENROUTER_API_KEY not set")
 
     payload = json.dumps(
         {
@@ -279,8 +279,8 @@ def fallback() -> dict:
 
 def generate_topic(retries: int = 2) -> dict:
     """Generate a completely fresh topic and all content via Groq."""
-    key = os.environ.get("GROQ_API_KEY", "")
-    print(f"  GROQ_API_KEY: {'SET (' + key[:8] + '...)' if key else 'NOT SET'}")
+    key = os.environ.get("OPENROUTER_API_KEY", "")
+    print(f"  OPENROUTER_API_KEY: {'SET (' + key[:8] + '...)' if key else 'NOT SET'}")
     prompt = make_prompt()
     for attempt in range(retries + 1):
         try:
