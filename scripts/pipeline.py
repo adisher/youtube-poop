@@ -222,17 +222,14 @@ a.cta{{display:block;padding:16px;background:#5865f2;color:#fff;text-decoration:
 
 
 def run(slot: str, topic_id: str | None = None):
-    topic_id = topic_id or random.choice(list(gen.TOPICS.keys()))
     run_id   = os.environ.get("GITHUB_RUN_ID", f"local-{int(datetime.now().timestamp())}")
     out_dir  = f"/tmp/llm-shorts-{slot}-{topic_id}"
     repo     = os.environ["GH_REPO"]
     owner    = repo.split("/")[0]
     repo_name = repo.split("/")[1]
 
-    print(f"\n{'='*52}\n  LLM Shorts — {slot.upper()} — {topic_id}\n{'='*52}\n")
-
     # 1. Generate video
-    kit = gen.generate(topic_id, slot, out_dir)
+    kit = gen.generate(None, slot, out_dir)
 
     # 2. Encode video as base64
     print("\n📦 Encoding video...")
