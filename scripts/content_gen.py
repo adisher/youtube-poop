@@ -133,8 +133,12 @@ def call_groq(prompt: str) -> dict:
         },
     )
 
-    with urllib.request.urlopen(req, timeout=30) as r:
-        resp = json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            resp = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Groq HTTP {e.code} {e.reason}: {body}") from e
 
     raw = resp["choices"][0]["message"]["content"].strip()
     # Strip markdown fences if model adds them
@@ -275,6 +279,8 @@ def fallback() -> dict:
 
 def generate_topic(retries: int = 2) -> dict:
     """Generate a completely fresh topic and all content via Groq."""
+    key = os.environ.get("GROQ_API_KEY", "")
+    print(f"  GROQ_API_KEY: {'SET (' + key[:8] + '...)' if key else 'NOT SET'}")
     prompt = make_prompt()
     for attempt in range(retries + 1):
         try:
