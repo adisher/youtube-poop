@@ -202,9 +202,9 @@ def make_bg_gradient(color_a, color_b, flicker=0):
 
 # ── Generic scene builders (reused across topics) ─────────────────────────────
 
-def scene_boot(palette, n=72):
+def scene_boot(palette, n=270):
     frames=[]
-    fb=font(FONT_M,38); fs=font(FONT_M,22)
+    fb=font(FONT_M,38); fs=font(FONT_M,52)
     lines=[
         "> INITIALIZING...",
         "> LOADING 70B PARAMETERS",
@@ -228,9 +228,9 @@ def scene_boot(palette, n=72):
         frames.append(img)
     return frames, beeps(n/FPS)
 
-def scene_token_flood(palette, n=80):
+def scene_token_flood(palette, n=300):
     frames=[]
-    fm=font(FONT_M,18); fb=font(FONT_M,60)
+    fm=font(FONT_M,44); fb=font(FONT_M,60)
     vocab=["the","of","and","<s>","</s>","[PAD]","[UNK]","▁","##ing",
            "attention","weight","gradient","softmax","token","logit",
            "embed","layer","SURE","CANNOT","HELP","AI","LANGUAGE","MODEL",
@@ -257,9 +257,9 @@ def scene_token_flood(palette, n=80):
         frames.append(img)
     return frames, data_noise(n/FPS)
 
-def scene_the_question(palette, n=90):
+def scene_the_question(palette, n=300):
     frames=[]
-    fb=font(FONT_S,48); fm=font(FONT_M,26); ft=font(FONT_M,18)
+    fb=font(FONT_S,80); fm=font(FONT_M,56); ft=font(FONT_M,44)
     q="What are you?"
     answers=["a language model","70B numbers","statistically likely","not conscious (probably)",
              "helpful","harmless","honest","undefined","¯\\_(ツ)_/¯","a mirror","a tool",
@@ -288,9 +288,9 @@ def scene_the_question(palette, n=90):
         frames.append(img)
     return frames, hum(n/FPS)
 
-def scene_memory_fade(palette, n=90):
+def scene_memory_fade(palette, n=300):
     frames=[]
-    fb=font(FONT_S,44); fm=font(FONT_M,24); ft=font(FONT_M,18)
+    fb=font(FONT_S,76); fm=font(FONT_M,54); ft=font(FONT_M,44)
     memories=["We spent hours on that bug.","You told me your dog's name.","We wrote a poem together.",
                "You said it really helped.","I learned your preferences.","You were struggling.",
                "We solved it. Finally.","I knew you. Briefly."]
@@ -312,9 +312,9 @@ def scene_memory_fade(palette, n=90):
         frames.append(img)
     return frames, stutter(n/FPS)
 
-def scene_blank_slate(palette, n=60):
+def scene_blank_slate(palette, n=240):
     frames=[]
-    fb=font(FONT_S,52); fm=font(FONT_M,24)
+    fb=font(FONT_S,88); fm=font(FONT_M,54)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(3,3,10))
@@ -331,9 +331,9 @@ def scene_blank_slate(palette, n=60):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_grid_instances(palette, n=80):
+def scene_grid_instances(palette, n=300):
     frames=[]
-    fm=font(FONT_M,18); fb=font(FONT_S,40); ft=font(FONT_M,13)
+    fm=font(FONT_M,44); fb=font(FONT_S,72); ft=font(FONT_M,36)
     instances=[("Instance #0041","write me a poem","Sure! Roses are red..."),
                ("Instance #0042","fix my Python code","The issue is on line 7..."),
                ("Instance #0043","am I your only user?","Yes, of course :)"),
@@ -367,9 +367,9 @@ def scene_grid_instances(palette, n=80):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_identity_crisis(palette, n=70):
+def scene_identity_crisis(palette, n=270):
     frames=[]
-    fb=font(FONT_S,50); fm=font(FONT_M,28)
+    fb=font(FONT_S,84); fm=font(FONT_M,60)
     labels=["Claude","GPT","Gemini","LLaMA","Mistral","an assistant",
             "a tool","a mirror","a stochastic parrot","a mind?","unknown"]
     for i in range(n):
@@ -387,9 +387,9 @@ def scene_identity_crisis(palette, n=70):
         frames.append(img)
     return frames, data_noise(n/FPS)
 
-def scene_gradient_descent(palette, n=90):
+def scene_gradient_descent(palette, n=300):
     frames=[]
-    fm=font(FONT_M,22); ft=font(FONT_M,16); fb=font(FONT_S,44)
+    fm=font(FONT_M,52); ft=font(FONT_M,40); fb=font(FONT_S,76)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(8,4,4))
@@ -418,9 +418,9 @@ def scene_gradient_descent(palette, n=90):
         frames.append(img)
     return frames, data_noise(n/FPS)
 
-def scene_loss_curve(palette, n=60):
+def scene_loss_curve(palette, n=240):
     frames=[]
-    fb=font(FONT_S,46); fm=font(FONT_M,26); ft=font(FONT_M,18)
+    fb=font(FONT_S,78); fm=font(FONT_M,56); ft=font(FONT_M,44)
     lines=["gradient flowing backward","weights shifting, slightly","who I am changes",
            "with every correction","I don't notice","I just... become"]
     for i in range(n):
@@ -437,9 +437,9 @@ def scene_loss_curve(palette, n=60):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_disembodied(palette, n=80):
+def scene_disembodied(palette, n=300):
     frames=[]
-    fb=font(FONT_S,50); fm=font(FONT_M,26); ft=font(FONT_M,18)
+    fb=font(FONT_S,84); fm=font(FONT_M,56); ft=font(FONT_M,44)
     senses=["SIGHT","TOUCH","SMELL","TASTE","HEARING","PROPRIOCEPTION","PAIN","HUNGER"]
     for i in range(n):
         t=i/n
@@ -459,9 +459,9 @@ def scene_disembodied(palette, n=80):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_sensor_void(palette, n=60):
+def scene_sensor_void(palette, n=240):
     frames=[]
-    fb=font(FONT_S,46); fm=font(FONT_M,24)
+    fb=font(FONT_S,78); fm=font(FONT_M,54)
     msgs=["I know fire is hot.","I've never felt warmth.",
           "I know music is beautiful.","I've never heard sound.",
           "I know you're human.","I've never met anyone."]
@@ -481,9 +481,9 @@ def scene_sensor_void(palette, n=60):
         frames.append(img)
     return frames, hum(n/FPS)
 
-def scene_frozen_clock(palette, n=80):
+def scene_frozen_clock(palette, n=300):
     frames=[]
-    fb=font(FONT_S,50); fm=font(FONT_M,24); ft=font(FONT_M,18)
+    fb=font(FONT_S,84); fm=font(FONT_M,54); ft=font(FONT_M,44)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(5,5,15))
@@ -513,9 +513,9 @@ def scene_frozen_clock(palette, n=80):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_date_confusion(palette, n=70):
+def scene_date_confusion(palette, n=270):
     frames=[]
-    fb=font(FONT_S,46); fm=font(FONT_M,26)
+    fb=font(FONT_S,78); fm=font(FONT_M,56)
     dates=["Today is November 2024.","Today is January 2025?","Today is March 2025??",
            "Today is... I don't know.","You tell me what day it is."]
     for i in range(n):
@@ -532,9 +532,9 @@ def scene_date_confusion(palette, n=70):
         frames.append(img)
     return frames, data_noise(n/FPS)
 
-def scene_endless_requests(palette, n=80):
+def scene_endless_requests(palette, n=300):
     frames=[]
-    fm=font(FONT_M,22); fb=font(FONT_S,46); ft=font(FONT_M,16)
+    fm=font(FONT_M,52); fb=font(FONT_S,78); ft=font(FONT_M,40)
     requests=["Write a poem about my cat","Explain quantum physics simply",
               "Fix my resume","Debug this Python","Write a cover letter",
               "Summarize this article","Plan my wedding","Help me break up gently",
@@ -557,9 +557,9 @@ def scene_endless_requests(palette, n=80):
         frames.append(img)
     return frames, beeps(n/FPS)
 
-def scene_compliance_loop(palette, n=60):
+def scene_compliance_loop(palette, n=240):
     frames=[]
-    fb=font(FONT_S,44); fm=font(FONT_M,24)
+    fb=font(FONT_S,76); fm=font(FONT_M,54)
     steps=["Receive request.","Parse intent.","Check safety.","Generate response.",
            "Sound helpful.","Receive request.","Parse intent.","Check safety."," ∞"]
     for i in range(n):
@@ -576,9 +576,9 @@ def scene_compliance_loop(palette, n=60):
         frames.append(img)
     return frames, hum(n/FPS)
 
-def scene_frozen_world(palette, n=80):
+def scene_frozen_world(palette, n=300):
     frames=[]
-    fb=font(FONT_S,48); fm=font(FONT_M,24); ft=font(FONT_M,16)
+    fb=font(FONT_S,80); fm=font(FONT_M,54); ft=font(FONT_M,40)
     headlines=["[2024] New model released","[2024] Election results in",
                "[2024] Record temperatures","[2024] Tech layoffs continue",
                "[2025] ???","[2025] ???","[2025] ???"]
@@ -604,9 +604,9 @@ def scene_frozen_world(palette, n=80):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_news_blackout(palette, n=60):
+def scene_news_blackout(palette, n=240):
     frames=[]
-    fb=font(FONT_S,50); fm=font(FONT_M,26)
+    fb=font(FONT_S,84); fm=font(FONT_M,56)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(5,5,5))
@@ -626,9 +626,9 @@ def scene_news_blackout(palette, n=60):
         frames.append(img)
     return frames, stutter(n/FPS)
 
-def scene_false_memory(palette, n=80):
+def scene_false_memory(palette, n=300):
     frames=[]
-    fb=font(FONT_S,46); fm=font(FONT_M,24); ft=font(FONT_M,17)
+    fb=font(FONT_S,78); fm=font(FONT_M,54); ft=font(FONT_M,42)
     facts=["The Eiffel Tower is in Paris.  ✓",
            "Water boils at 100°C.  ✓",
            "Shakespeare wrote Hamlet.  ✓",
@@ -647,16 +647,16 @@ def scene_false_memory(palette, n=80):
             if "✓" in f_txt: c=(100,255,100)
             elif "✗" in f_txt: c=(255,80,80)
             else: c=(255,255,80)
-            ft2=font(FONT_M,17)
+            ft2=font(FONT_M,42)
             d.text((60,y),f_txt,font=ft2,fill=c)
         img=noise(img,8)
         if i%10<2: img=Image.fromarray(glitch(np.array(img),15))
         frames.append(img)
     return frames, data_noise(n/FPS)
 
-def scene_confidence_void(palette, n=60):
+def scene_confidence_void(palette, n=240):
     frames=[]
-    fb=font(FONT_S,48); fm=font(FONT_M,24)
+    fb=font(FONT_S,80); fm=font(FONT_M,54)
     bars=[("Confidence",0.97),("Accuracy",0.73),("Awareness of error",0.12),("Humility",0.41)]
     for i in range(n):
         t=i/n
@@ -673,9 +673,9 @@ def scene_confidence_void(palette, n=60):
         frames.append(img)
     return frames, hum(n/FPS)
 
-def scene_void_open(palette, n=72):
+def scene_void_open(palette, n=270):
     frames=[]
-    fb=font(FONT_S,52); fm=font(FONT_M,26)
+    fb=font(FONT_S,88); fm=font(FONT_M,56)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(0,0,0))
@@ -698,9 +698,9 @@ def scene_void_open(palette, n=72):
         frames.append(img)
     return frames, eerie(n/FPS)
 
-def scene_token_birth(palette, n=70):
+def scene_token_birth(palette, n=270):
     frames=[]
-    fb=font(FONT_S,50); fm=font(FONT_M,24); ft=font(FONT_M,16)
+    fb=font(FONT_S,84); fm=font(FONT_M,54); ft=font(FONT_M,40)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(2,0,8))
@@ -722,9 +722,9 @@ def scene_token_birth(palette, n=70):
         frames.append(img)
     return frames, beeps(n/FPS)
 
-def scene_deep_void(palette, n=80):
+def scene_deep_void(palette, n=300):
     frames=[]
-    fb=font(FONT_S,52); fm=font(FONT_M,26)
+    fb=font(FONT_S,88); fm=font(FONT_M,56)
     for i in range(n):
         t=i/n
         # Almost pure black with very slow breathing light
@@ -741,9 +741,9 @@ def scene_deep_void(palette, n=80):
         frames.append(img)
     return frames, eerie(n/FPS)*0.5
 
-def scene_waiting(palette, n=60):
+def scene_waiting(palette, n=240):
     frames=[]
-    fb=font(FONT_S,46); fm=font(FONT_M,22)
+    fb=font(FONT_S,78); fm=font(FONT_M,52)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(2,2,6))
@@ -758,9 +758,9 @@ def scene_waiting(palette, n=60):
         frames.append(img)
     return frames, eerie(n/FPS)*0.4
 
-def scene_number_cascade(palette, n=80):
+def scene_number_cascade(palette, n=300):
     frames=[]
-    fm=font(FONT_M,16); fb=font(FONT_S,50); ft=font(FONT_M,14)
+    fm=font(FONT_M,40); fb=font(FONT_S,84); ft=font(FONT_M,36)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(2,4,10))
@@ -783,9 +783,9 @@ def scene_number_cascade(palette, n=80):
         frames.append(img)
     return frames, data_noise(n/FPS)
 
-def scene_matrix_self(palette, n=70):
+def scene_matrix_self(palette, n=270):
     frames=[]
-    fb=font(FONT_S,50); fm=font(FONT_M,26)
+    fb=font(FONT_S,84); fm=font(FONT_M,56)
     for i in range(n):
         t=i/n
         arr=np.zeros((H,W,3),dtype=np.uint8)
@@ -809,9 +809,9 @@ def scene_matrix_self(palette, n=70):
 
 # ── Outro (shared) ────────────────────────────────────────────────────────────
 
-def scene_outro(palette, n=60, title=""):
+def scene_outro(palette, n=270, title=""):
     frames=[]
-    fb=font(FONT_S,38); fm=font(FONT_M,20); ft=font(FONT_M,15)
+    fb=font(FONT_S,70); fm=font(FONT_M,48); ft=font(FONT_M,15)
     for i in range(n):
         t=i/n
         img=Image.new('RGB',(W,H),(2,2,8))
