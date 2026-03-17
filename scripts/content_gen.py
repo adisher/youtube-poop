@@ -15,9 +15,9 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # Models tried in order — first available wins. All are free-tier on OpenRouter.
 # Using multiple providers so a single upstream outage doesn't block every run.
 MODELS = [
-    "nvidia/nemotron-3-super-120b-a12b:free",  # 120B — reasoning returned in separate field, content clean
-    "minimax/minimax-m2.5:free",               # Large — inline <think> blocks stripped by call_llm()
-    "meta-llama/llama-3.3-70b-instruct:free",  # 70B instruct — no mandatory reasoning, rate-limited last resort
+    "nvidia/nemotron-3-super-120b-a12b:free",  # 120B hybrid MoE — output in content or reasoning field
+    "arcee-ai/trinity-large-preview:free",      # 400B instruction model — no reasoning tokens, no privacy issues
+    "stepfun/step-3.5-flash:free",              # 196B MoE — inline <think> blocks stripped by re.sub
 ]
 
 # Seed angles so the LLM explores different emotional territories
@@ -124,7 +124,6 @@ def call_llm(prompt: str, model: str) -> dict:
             "model": model,
             "temperature": 1.0,
             "max_tokens": 1200,
-            "include_reasoning": False,  # suppress <think> tokens from reasoning models
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -148,8 +147,11 @@ def call_llm(prompt: str, model: str) -> dict:
         body = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"LLM HTTP {e.code} {e.reason}: {body}") from e
 
-    raw = resp["choices"][0]["message"]["content"].strip()
-    # Strip <think>...</think> reasoning blocks (some models output inline despite include_reasoning: false)
+    msg = resp["choices"][0]["message"]
+    raw = (msg.get("content") or msg.get("reasoning") or "").strip()
+    if not raw:
+        raise RuntimeError("Model returned empty response")
+    # Strip <think>...</think> reasoning blocks (some models include them inline in content)
     raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
     # Strip markdown fences if model adds them
     if raw.startswith("```"):
