@@ -207,23 +207,24 @@ def act_boot(topic):
     rain_set = RAIN_CHARS.get(style, RAIN_CHARS["katakana"])
     f_term = fnt(FONT_M, 52)
     f_rain = fnt(FONT_M, 30)
+    # Mutable list so rain can fall each frame
     rain = [
-        (random.randint(0, W), random.randint(0, H), random.choice(rain_set))
+        [random.randint(0, W), random.randint(-H, H), random.choice(rain_set)]
         for _ in range(80)
     ]
 
-    # Tint background slightly with palette color
-    bg = (max(2, color[0] // 20), max(2, color[1] // 20), max(2, color[2] // 20))
+    # Stronger palette tint — visibly different per topic (~12% brightness)
+    bg = (max(4, color[0] // 8), max(4, color[1] // 8), max(4, color[2] // 8))
 
     for i in range(n):
         img = Image.new("RGB", (W, H), bg)
         d = ImageDraw.Draw(img)
-        # Rain
-        for rx, ry, rc in rain:
+        # Falling rain
+        for r in rain:
             a = random.randint(15, 55)
             rc2 = random.choice(rain_set)
             d.text(
-                (rx, ry),
+                (r[0], r[1]),
                 rc2,
                 font=f_rain,
                 fill=(
@@ -232,6 +233,11 @@ def act_boot(topic):
                     clamp(color[2] * a // 200),
                 ),
             )
+            r[1] += random.randint(4, 14)   # fall downward
+            if r[1] > H + 20:               # wrap back to top
+                r[1] = random.randint(-80, -10)
+                r[0] = random.randint(0, W)
+                r[2] = random.choice(rain_set)
         visible = min(i // 22 + 1, len(lines))
         y_start = H // 2 - (visible * 72) // 2
         for j, line in enumerate(lines[:visible]):
@@ -306,8 +312,12 @@ def act_data_flood(topic):
         for _ in range(55)
     ]
 
+    # Palette-tinted background (palette[1] at ~10% brightness)
+    p1 = tuple(palette[1])
+    bg_flood = (max(3, p1[0] // 10), max(3, p1[1] // 10), max(3, p1[2] // 10))
+
     for i in range(n):
-        img = Image.new("RGB", (W, H), (0, 0, 5))
+        img = Image.new("RGB", (W, H), bg_flood)
         d = ImageDraw.Draw(img)
         new_s = []
         for x, y, tok in streams:
@@ -330,13 +340,18 @@ def act_data_flood(topic):
                 )
         streams[:] = new_s
 
-        # Central label — varies by style
+        # Central label — binary/hex keep their format; others cycle topic answer words
         if style == "binary":
             label = format(i * 137 % 65536, "016b")
         elif style == "hex":
             label = f"0x{i*137%0xFFFF:04X}"
         else:
-            label = f"TOKEN #{i*137%50257:05d}"
+            answers = topic.get("answers", [])
+            # Every 30 frames show a topic answer word for 8 frames, else TOKEN
+            if answers and (i % 30) < 8:
+                label = answers[(i // 30) % len(answers)].upper()
+            else:
+                label = f"TOKEN #{i*137%50257:05d}"
         if i % 5 == 0:
             label = "".join(
                 chr(random.randint(0x2580, 0x259F)) if random.random() < 0.35 else c
@@ -362,6 +377,8 @@ def act_question(topic):
     bg_mode = topic.get("question_bg", "hue_shift")
     f_ans = fnt(FONT_S, 78)
     f_fly = fnt(FONT_M, 46)
+    # Unique per topic — makes answer scatter positions different every reel
+    topic_seed = abs(hash(topic.get("topic_id", "x"))) % 100000
 
     for i in range(n):
         t = i / n
@@ -409,7 +426,7 @@ def act_question(topic):
         elif bg_mode == "particles":
             img = Image.new("RGB", (W, H), (3, 3, 10))
             d2 = ImageDraw.Draw(img)
-            random.seed(i * 7)
+            random.seed(topic_seed + i * 7)
             for _ in range(60):
                 px = random.randint(0, W)
                 py = random.randint(0, H)
@@ -442,8 +459,8 @@ def act_question(topic):
             [((W - qw) / 2, 320), ((W + qw) / 2, 320)], fill=(255, 255, 255), width=3
         )
 
-        # Scattered small answers
-        random.seed(i * 3 + 7)
+        # Scattered small answers — seeded by topic_id so positions vary per topic
+        random.seed(topic_seed + i * 3)
         for _ in range(4):
             ax = random.randint(40, W - 320)
             ay = random.randint(400, H - 250)
@@ -470,7 +487,19 @@ def act_climax(topic):
     captions = topic["captions"]
     cut_every = CUT_SPEED.get(topic.get("climax_speed", "medium"), 4)
     palette = topic["palette"]
-    f_sm = fnt(FONT_M, 46)
+    p0 = tuple(palette[0])
+    p1 = tuple(palette[1])
+    p2 = tuple(palette[2])
+    bsod_lines = topic.get(
+        "bsod_lines",
+        ["STOP: UNKNOWN_FAULT", "0x0000  0x00FEELINGS", "A fatal exception has occurred."],
+    )
+    climax_style = topic.get("climax_style", "corrupt")
+
+    # Topic-seeded mode order — same topic = same order, different topics = different shuffle
+    _rng = random.Random(abs(hash(topic.get("topic_id", "x"))))
+    _mode_order = [0, 1, 2, 3, 4]
+    _rng.shuffle(_mode_order)
 
     for i in range(n):
         t = i / n
@@ -482,55 +511,131 @@ def act_climax(topic):
             tuple(cap_entry[1]) if isinstance(cap_entry[1], list) else cap_entry[1]
         )
 
-        mode = (i // 10) % 5
-        if mode == 0:
-            arr = np.random.randint(0, 50, (H, W, 3), dtype=np.uint8)
-            arr[H // 3 : 2 * H // 3] = [18, 18, 35]
-            img = Image.fromarray(arr)
-        elif mode == 1:
+        mode = _mode_order[(i // 10) % 5]
+
+        # ── Mode 1: always BSOD (iconic LLM crash screen, text from LLM) ──
+        if mode == 1:
             img = Image.new("RGB", (W, H), (0, 0, 160))
             d2 = ImageDraw.Draw(img)
-            d2.text(
-                (W // 2 - 220, 300), "  :(", font=fnt(FONT_S, 260), fill=(255, 255, 255)
-            )
-            for bi, (btxt, bsz) in enumerate(
-                [
-                    ("Your AI stopped working", 52),
-                    ("STOP: EXISTENTIAL_OVERFLOW", 44),
-                    ("0x000000AI  0x00FEELINGS", 44),
-                ]
-            ):
-                bfl, _ = fit_font(FONT_M, btxt, W - 100, bsz)
+            d2.text((W // 2 - 220, 300), "  :(", font=fnt(FONT_S, 260), fill=(255, 255, 255))
+            for bi, btxt in enumerate(bsod_lines):
+                bfl, _ = fit_font(FONT_M, btxt, W - 100, 48)
                 d2.text((60, 820 + bi * 100), btxt, font=bfl, fill=(255, 255, 255))
-        elif mode == 2:
+            # img already updated in-place via d2 (ImageDraw draws on img directly)
+
+        # ── Mode 4: always palette gradient (outro fade) ──
+        elif mode == 4:
             arr = np.zeros((H, W, 3), dtype=np.uint8)
-            p0 = palette[0]
-            p1 = palette[1]
-            for y in range(0, H, 2):
-                for x in range(0, W, 4):
-                    dist = math.sqrt((x - W // 2) ** 2 + (y - H // 2) ** 2)
-                    hue = (dist * 0.002 + t * 2) % 1.0
-                    r, g, b = colorsys.hsv_to_rgb(hue, 1, 0.5)
-                    arr[y : y + 2, x : x + 4] = [
-                        int(r * 255),
-                        int(g * 255),
-                        int(b * 255),
-                    ]
-            img = Image.fromarray(arr)
-        elif mode == 3:
-            arr = np.random.randint(0, 200, (H, W, 3), dtype=np.uint8)
-            img = Image.fromarray(arr)
-        else:
-            arr = np.zeros((H, W, 3), dtype=np.uint8)
-            p = palette
             for y in range(H):
                 tt = y / H
                 arr[y] = [
-                    clamp(lerp(p[0][0] // 5, p[1][0] // 5, tt)),
-                    clamp(lerp(p[0][1] // 5, p[1][1] // 5, tt)),
-                    clamp(lerp(p[0][2] // 5, p[1][2] // 5, tt)),
+                    clamp(lerp(p0[0] // 5, p1[0] // 5, tt)),
+                    clamp(lerp(p0[1] // 5, p1[1] // 5, tt)),
+                    clamp(lerp(p0[2] // 5, p1[2] // 5, tt)),
                 ]
             img = Image.fromarray(arr)
+
+        # ── Modes 0, 2, 3: vary by climax_style ──
+        elif climax_style == "corrupt":
+            if mode == 0:
+                # p0-tinted noise blocks
+                arr = np.random.randint(0, 60, (H, W, 3), dtype=np.uint8)
+                arr[:, :, 0] = np.clip(arr[:, :, 0] + p0[0] // 3, 0, 255)
+                arr[:, :, 1] = np.clip(arr[:, :, 1] + p0[1] // 3, 0, 255)
+                arr[:, :, 2] = np.clip(arr[:, :, 2] + p0[2] // 3, 0, 255)
+                img = Image.fromarray(arr)
+            elif mode == 2:
+                # Radial hue burst
+                arr = np.zeros((H, W, 3), dtype=np.uint8)
+                for y in range(0, H, 2):
+                    for x in range(0, W, 4):
+                        dist = math.sqrt((x - W // 2) ** 2 + (y - H // 2) ** 2)
+                        hue = (dist * 0.002 + t * 2) % 1.0
+                        r, g, b = colorsys.hsv_to_rgb(hue, 1, 0.5)
+                        arr[y : y + 2, x : x + 4] = [int(r * 255), int(g * 255), int(b * 255)]
+                img = Image.fromarray(arr)
+            else:
+                # mode 3: p1-tinted heavy noise
+                arr = np.random.randint(0, 200, (H, W, 3), dtype=np.uint8)
+                arr[:, :, 0] = np.clip(arr[:, :, 0] // 4 + p1[0] // 3, 0, 255)
+                arr[:, :, 1] = np.clip(arr[:, :, 1] // 4 + p1[1] // 3, 0, 255)
+                arr[:, :, 2] = np.clip(arr[:, :, 2] // 4 + p1[2] // 3, 0, 255)
+                img = Image.fromarray(arr)
+
+        elif climax_style == "digital":
+            if mode == 0:
+                # Horizontal scan lines sweeping in p0
+                img = Image.new("RGB", (W, H), (3, 3, 10))
+                d2 = ImageDraw.Draw(img)
+                scan_y = int((t * H * 3) % H)
+                for y in range(scan_y, min(scan_y + 80, H)):
+                    a = 1 - abs(y - scan_y - 40) / 40
+                    d2.line(
+                        [(0, y), (W, y)],
+                        fill=(clamp(p0[0] * a), clamp(p0[1] * a), clamp(p0[2] * a)),
+                        width=1,
+                    )
+            elif mode == 2:
+                # Grid pulse in p1
+                img = Image.new("RGB", (W, H), (5, 5, 15))
+                d2 = ImageDraw.Draw(img)
+                pulse = 0.5 + 0.5 * math.sin(t * math.pi * 6)
+                gs = 60
+                for x in range(0, W, gs):
+                    d2.line([(x, 0), (x, H)], fill=(clamp(p1[0] * pulse), clamp(p1[1] * pulse), clamp(p1[2] * pulse)))
+                for y in range(0, H, gs):
+                    d2.line([(0, y), (W, y)], fill=(clamp(p1[0] * pulse), clamp(p1[1] * pulse), clamp(p1[2] * pulse)))
+            else:
+                # mode 3: scrolling data text rows in p2
+                img = Image.new("RGB", (W, H), (2, 2, 8))
+                d2 = ImageDraw.Draw(img)
+                f_data = fnt(FONT_M, 28)
+                chars = RAIN_CHARS.get(topic.get("boot_style", "katakana"), RAIN_CHARS["katakana"])
+                for row in range(0, H, 36):
+                    scroll = int(t * 400) % W
+                    line_txt = "".join(random.choice(chars) for _ in range(50))
+                    d2.text(
+                        (-scroll, row),
+                        line_txt + line_txt,
+                        font=f_data,
+                        fill=(clamp(p2[0] // 2), clamp(p2[1] // 2), clamp(p2[2] // 2)),
+                    )
+
+        else:  # "void"
+            if mode == 0:
+                # Sparse particles in p0
+                img = Image.new("RGB", (W, H), (2, 2, 8))
+                d2 = ImageDraw.Draw(img)
+                random.seed(abs(hash(topic.get("topic_id", "x"))) + i * 17)
+                for _ in range(40):
+                    px2, py2 = random.randint(0, W), random.randint(0, H)
+                    r2 = random.randint(1, 5)
+                    a = random.randint(40, 180) / 255
+                    d2.ellipse(
+                        [px2 - r2, py2 - r2, px2 + r2, py2 + r2],
+                        fill=(clamp(p0[0] * a), clamp(p0[1] * a), clamp(p0[2] * a)),
+                    )
+                random.seed()
+            elif mode == 2:
+                # Radial fade from center in p1
+                arr = np.zeros((H, W, 3), dtype=np.uint8)
+                cx, cy = W // 2, H // 2
+                max_d = math.sqrt(cx ** 2 + cy ** 2)
+                pulse = 0.6 + 0.4 * math.sin(t * math.pi * 4)
+                for y in range(0, H, 2):
+                    for x in range(0, W, 2):
+                        d_val = math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+                        a = max(0, 1 - d_val / max_d) * pulse
+                        arr[y : y + 2, x : x + 2] = [clamp(p1[0] * a), clamp(p1[1] * a), clamp(p1[2] * a)]
+                img = Image.fromarray(arr)
+            else:
+                # mode 3: edge glow in p2 on near-black
+                arr = np.zeros((H, W, 3), dtype=np.uint8)
+                for y in range(H):
+                    edge = min(y, H - y) / (H // 2)
+                    a = (1 - edge) * 0.4
+                    arr[y] = [clamp(p2[0] * a), clamp(p2[1] * a), clamp(p2[2] * a)]
+                img = Image.fromarray(arr)
 
         d = ImageDraw.Draw(img)
         if i < n - 30:
@@ -557,8 +662,19 @@ def act_epilogue(topic):
     appear = [(j + 1) * n // (len(parts) + 2) for j in range(len(parts))]
     f_cur = fnt(FONT_M, 54)
 
+    # Faint palette[2] vertical gradient background — unique per topic
+    p2_ep = tuple(topic["palette"][2])
+
     for i in range(n):
-        img = Image.new("RGB", (W, H), (2, 2, 8))
+        arr_ep = np.zeros((H, W, 3), dtype=np.uint8)
+        for y in range(H):
+            fade_ep = (1 - y / H) * 0.08   # very subtle, darkest at bottom
+            arr_ep[y] = [
+                clamp(p2_ep[0] * fade_ep),
+                clamp(p2_ep[1] * fade_ep),
+                clamp(p2_ep[2] * fade_ep),
+            ]
+        img = Image.fromarray(arr_ep)
         d = ImageDraw.Draw(img)
         cy = H // 2 - len(parts) * 65
         for j, part in enumerate(parts):

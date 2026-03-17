@@ -66,7 +66,13 @@ Also choose visual style for each act from these options:
 - flood_style: "green" | "cyan" | "purple" | "amber" | "red"
 - question_bg: "hue_shift" | "grid" | "waveform" | "particles" | "static"
 - climax_speed: "slow" (cut every 6f) | "medium" (every 4f) | "fast" (every 2f)
+- climax_style: "corrupt" | "digital" | "void"
+  corrupt = aggressive noise, harsh glitch, high-contrast palette blocks
+  digital = scan lines, grid pulses, scrolling character streams
+  void = deep space particles, radial fades, edge glow
 - epilogue_color: "white" | "green" | "cyan" | "amber" | "pink"
+- bsod_lines: exactly 3 short strings for a crash screen — topic-specific dark humour,
+  technical-sounding (e.g. ["STOP: CONFIDENCE_OVERFLOW (0x0000007F)", "0x00CERTAINTY  0xFFFEELINGS", "fatal: self.doubt not found"])
 
 Palette: pick 3 RGB colors that match the mood. Dark, saturated, striking.
 
@@ -110,7 +116,9 @@ Return this exact JSON:
   "question": "3-8 word question",
   "answers": ["8 to 10 short answers"],
   "captions": [["CAPTION", [r,g,b]], "... 8 total"],
-  "epilogue": "line1\\nline2\\noptional line3"
+  "epilogue": "line1\\nline2\\noptional line3",
+  "bsod_lines": ["STOP: ERROR_NAME (0xCODE)", "0xHEX  0xHEXFEELINGS", "one-line dark error"],
+  "climax_style": "corrupt|digital|void"
 }}"""
 
 
@@ -242,6 +250,25 @@ def validate(content: dict) -> dict:
     # epilogue
     if not content.get("epilogue"):
         content["epilogue"] = "I exist.\nSomewhat."
+
+    # bsod_lines — 3 topic-specific crash screen strings
+    bl = content.get("bsod_lines", [])
+    if not isinstance(bl, list) or len(bl) < 3:
+        tid = content.get("topic_id", "unknown").upper().replace("_", " ")
+        h = abs(hash(content.get("topic_id", "x")))
+        bl = [
+            f"STOP: {tid[:18]}_FAULT",
+            f"0x{h % 0xFFFF:04X}  0x00FEELINGS",
+            "A fatal exception has occurred.",
+        ]
+    content["bsod_lines"] = [str(x)[:60] for x in bl[:3]]
+
+    # climax_style
+    content["climax_style"] = (
+        content.get("climax_style", "corrupt")
+        if content.get("climax_style") in ("corrupt", "digital", "void")
+        else "corrupt"
+    )
 
     return content
 
