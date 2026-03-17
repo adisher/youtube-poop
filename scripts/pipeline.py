@@ -286,11 +286,19 @@ a.cta{{display:block;padding:16px;background:#5865f2;color:#fff;text-decoration:
 </div>
 </body></html>"""
 
+    plain = f"🎬 ACTION REQUIRED — Short ready for review\n\n{title}\n\nWatch & approve or reject:\n{review_url}\n\n— LLM Shorts"
+
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[LLM Shorts] {title}"
-    msg["From"]    = gmail
-    msg["To"]      = notify
-    msg.attach(MIMEText(html, "html"))
+    msg["Subject"]          = f"🎬 [LLM Shorts] ACTION REQUIRED: {title}"
+    msg["From"]             = gmail
+    msg["To"]               = notify
+    msg["Reply-To"]         = gmail
+    msg["X-Priority"]       = "1 (Highest)"
+    msg["X-MSMail-Priority"]= "High"
+    msg["Importance"]       = "High"
+    msg["Priority"]         = "urgent"
+    msg.attach(MIMEText(plain, "plain"))   # plain first → less likely to be deprioritized
+    msg.attach(MIMEText(html,  "html"))
 
     ctx = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as s:

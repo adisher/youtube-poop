@@ -22,13 +22,21 @@ def send_confirm(run_id: str):
 <h2 style="color:#d63031">🗑 Rejected</h2>
 <p>Run <code>{run_id}</code> was rejected. Nothing was uploaded to YouTube.</p>
 </body></html>"""
+    plain = f"🗑 Video rejected.\n\nRun {run_id} was rejected. Nothing was uploaded to YouTube.\n\n— LLM Shorts"
+
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "[LLM Shorts] Video Rejected"
-    msg["From"] = gmail
-    msg["To"] = notify
+    msg["Subject"]           = "🗑 [LLM Shorts] Video Rejected"
+    msg["From"]              = gmail
+    msg["To"]                = notify
+    msg["Reply-To"]          = gmail
+    msg["X-Priority"]        = "1 (Highest)"
+    msg["X-MSMail-Priority"] = "High"
+    msg["Importance"]        = "High"
+    msg["Priority"]          = "urgent"
+    msg.attach(MIMEText(plain, "plain"))
     msg.attach(MIMEText(html, "html"))
     ctx = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as s:

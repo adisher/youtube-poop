@@ -73,10 +73,18 @@ def send_confirm(title: str, video_id: str):
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
+    plain = f"✅ Published to YouTube!\n\n{title}\n\nWatch it live:\n{yt}\n\n— LLM Shorts"
+
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[LLM Shorts] Published: {title}"
-    msg["From"] = gmail
-    msg["To"] = notify
+    msg["Subject"]           = f"✅ [LLM Shorts] Published: {title}"
+    msg["From"]              = gmail
+    msg["To"]                = notify
+    msg["Reply-To"]          = gmail
+    msg["X-Priority"]        = "1 (Highest)"
+    msg["X-MSMail-Priority"] = "High"
+    msg["Importance"]        = "High"
+    msg["Priority"]          = "urgent"
+    msg.attach(MIMEText(plain, "plain"))
     msg.attach(MIMEText(html, "html"))
     ctx = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as s:
