@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Triggered by Approve button — uploads video to YouTube."""
 
-import os, sys, json, hmac, hashlib, smtplib, ssl, urllib.request, urllib.error, base64, tempfile
+import os, sys, json, hmac, hashlib, smtplib, ssl, urllib.request, urllib.error, tempfile, base64
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -50,11 +50,11 @@ def get_kit_from_gh_pages(run_id: str) -> dict | None:
         if m:
             kit[field] = m.group(1).strip()
 
-    # Extract base64 video
-    vm = re.search(r'src="data:video/mp4;base64,([^"]+)"', content)
+    # Extract release asset video URL
+    vm = re.search(r'<source src="([^"]+)" type="video/mp4">', content)
     if not vm:
         return None
-    kit["video_b64"] = vm.group(1)
+    kit["video_url"] = vm.group(1)
     return kit
 
 
@@ -98,11 +98,18 @@ if not kit:
     print("❌ Could not find review page / video.")
     sys.exit(1)
 
-# Write video to temp file
+# Download video from GitHub Release asset
+print(f"  Downloading video from release asset...")
+pat = os.environ["GH_PAT"]
+req = urllib.request.Request(
+    kit["video_url"],
+    headers={"Authorization": f"token {pat}"},
+)
 with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-    tmp.write(base64.b64decode(kit["video_b64"]))
+    with urllib.request.urlopen(req, timeout=300) as r:
+        tmp.write(r.read())
     tmp_path = tmp.name
-print(f"  ✓ Video decoded ({os.path.getsize(tmp_path)//1024}KB)")
+print(f"  ✓ Video downloaded ({os.path.getsize(tmp_path)//1024}KB)")
 
 # Upload to YouTube
 description = "#AIShorts #LLM #ArtificialIntelligence #MachineLearning #AILife #ChatGPT #FutureOfAI #DeepLearning #NeuralNetwork #AIExperience #AIConsciousness #LanguageModel"
