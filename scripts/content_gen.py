@@ -15,9 +15,9 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # Models tried in order — first available wins. All are free-tier on OpenRouter.
 # Using multiple providers so a single upstream outage doesn't block every run.
 MODELS = [
-    "nvidia/nemotron-3-super-120b-a12b:free",  # 120B hybrid MoE — output in content or reasoning field
-    "arcee-ai/trinity-large-preview:free",      # 400B instruction model — no reasoning tokens, no privacy issues
-    "stepfun/step-3.5-flash:free",              # 196B MoE — inline <think> blocks stripped by re.sub
+    "stepfun/step-3.5-flash:free",              # 196B MoE — confirmed working; inline <think> blocks stripped by re.sub
+    "nvidia/nemotron-3-super-120b-a12b:free",  # 120B hybrid MoE — fallback
+    "arcee-ai/trinity-large-preview:free",      # 400B instruction model — fallback
 ]
 
 # Seed angles so the LLM explores different emotional territories
