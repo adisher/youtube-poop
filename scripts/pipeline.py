@@ -6,7 +6,7 @@ LLM Shorts — Pipeline
 3. Emails you the review link
 """
 
-import os, sys, json, random, smtplib, ssl, hmac, hashlib, base64, subprocess, tempfile, urllib.request, urllib.error
+import os, sys, json, random, smtplib, ssl, hmac, hashlib, subprocess, tempfile, urllib.request, urllib.error, urllib.parse
 from email.mime.multipart import MIMEMultipart
 from email.mime.text      import MIMEText
 from datetime             import datetime, timezone
@@ -22,7 +22,7 @@ def sign(run_id: str) -> str:
     return hmac.new(secret.encode(), run_id.encode(), hashlib.sha256).hexdigest()[:24]
 
 
-def build_review_page(kit: dict, run_id: str, sig: str, video_b64: str) -> str:
+def build_review_page(kit: dict, run_id: str, sig: str, video_url: str) -> str:
     repo   = os.environ["GH_REPO"]
     title  = kit["title"]
     topic  = kit["topic"]
@@ -66,7 +66,7 @@ video {{ width: 100%; border-radius: 10px; background: #000;
   <div class="meta">Run: {run_id}</div>
 
   <video controls playsinline>
-    <source src="data:video/mp4;base64,{video_b64}" type="video/mp4">
+    <source src="{video_url}" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
@@ -109,6 +109,84 @@ async function go(workflow) {{
 </script>
 </body>
 </html>"""
+
+
+def gh_api(method: str, path: str, body=None, *, pat: str, content_type="application/json") -> dict:
+    """Minimal GitHub REST API helper using only stdlib."""
+    url = f"https://api.github.com{path}"
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        url, data=data, method=method,
+        headers={
+            "Authorization": f"token {pat}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": content_type,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body_txt = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GitHub API {method} {path} → HTTP {e.code}: {body_txt}") from e
+
+
+def upload_video_to_release(video_path: str, run_id: str, title: str) -> str:
+    """
+    Create a GitHub pre-release tagged 'review-{run_id}' and upload the
+    video as a release asset.  Returns the browser_download_url.
+    """
+    pat       = os.environ["GH_PAT"]
+    repo      = os.environ["GH_REPO"]
+
+    # 1. Create the release
+    print(f"  Creating GitHub release for run {run_id}...")
+    release = gh_api(
+        "POST", f"/repos/{repo}/releases",
+        body={
+            "tag_name":         f"review-{run_id}",
+            "name":             f"Review: {title}",
+            "body":             f"Auto-generated review for run {run_id}",
+            "draft":            False,
+            "prerelease":       True,
+            "target_commitish": "main",
+        },
+        pat=pat,
+    )
+    release_id    = release["id"]
+    upload_url    = release["upload_url"].split("{")[0]   # strip {?name,label} template
+    print(f"  ✓ Release created (id={release_id})")
+
+    # 2. Upload the video asset
+    print(f"  Uploading video ({Path(video_path).stat().st_size // (1024*1024)}MB)...")
+    asset_name = f"{run_id}.mp4"
+    upload_endpoint = f"{upload_url}?name={urllib.parse.quote(asset_name)}"
+    with open(video_path, "rb") as fh:
+        video_bytes = fh.read()
+
+    req = urllib.request.Request(
+        upload_endpoint,
+        data=video_bytes,
+        method="POST",
+        headers={
+            "Authorization": f"token {pat}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "video/mp4",
+            "Content-Length": str(len(video_bytes)),
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r:
+            asset = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body_txt = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Asset upload failed HTTP {e.code}: {body_txt}") from e
+
+    url = asset["browser_download_url"]
+    print(f"  ✓ Video uploaded → {url}")
+    return url
 
 
 def commit_to_gh_pages(filename: str, content: str):
@@ -231,15 +309,13 @@ def run(slot: str, topic_id: str | None = None):
     # 1. Generate video
     kit = gen.generate(None, slot, out_dir)
 
-    # 2. Encode video as base64
-    print("\n📦 Encoding video...")
-    with open(kit["video"], "rb") as f:
-        video_b64 = base64.b64encode(f.read()).decode()
-    print(f"  ✓ Encoded ({len(video_b64) // 1024}KB base64)")
+    # 2. Upload video to a GitHub Release asset (avoids 100 MB git file limit)
+    print("\n🚀 Uploading video to GitHub Release...")
+    video_url = upload_video_to_release(kit["video"], run_id, kit["title"])
 
     # 3. Build review page HTML
     sig         = sign(run_id)
-    review_html = build_review_page(kit, run_id, sig, video_b64)
+    review_html = build_review_page(kit, run_id, sig, video_url)
 
     # 4. Commit to gh-pages
     print("\n📄 Committing review page to gh-pages...")
