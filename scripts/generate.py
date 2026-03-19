@@ -56,6 +56,24 @@ def fit_font(path, text, max_w, start_size, min_size=34):
     return ImageFont.truetype(path, min_size), min_size
 
 
+def hsv_s1_to_rgb_array(h_arr, v=0.5):
+    """
+    Vectorised HSV→RGB with S=1 fixed.
+    h_arr: float32 ndarray in [0,1], any shape.
+    Returns uint8 array of same shape + channel dim (shape + (3,)).
+    """
+    h6 = (h_arr * 6).astype(np.float32)
+    hi = h6.astype(np.int32) % 6
+    f  = h6 - np.floor(h6)
+    q  = np.float32(v) * (1 - f)
+    t  = np.float32(v) * f
+    vv = np.float32(v)
+    r = np.select([hi==0, hi==1, hi==2, hi==3, hi==4], [vv, q,  0,  0,  t ], default=vv)
+    g = np.select([hi==0, hi==1, hi==2, hi==3, hi==4], [t,  vv, vv, q,  0 ], default=0)
+    b = np.select([hi==0, hi==1, hi==2, hi==3, hi==4], [0,  0,  t,  vv, vv], default=q)
+    return (np.stack([r, g, b], axis=-1) * 255).astype(np.uint8)
+
+
 def glitch_rows(arr, count=12, shift=60):
     out = arr.copy()
     h = arr.shape[0]
@@ -545,15 +563,14 @@ def act_climax(topic):
                 arr[:, :, 2] = np.clip(arr[:, :, 2] + p0[2] // 3, 0, 255)
                 img = Image.fromarray(arr)
             elif mode == 2:
-                # Radial hue burst
-                arr = np.zeros((H, W, 3), dtype=np.uint8)
-                for y in range(0, H, 2):
-                    for x in range(0, W, 4):
-                        dist = math.sqrt((x - W // 2) ** 2 + (y - H // 2) ** 2)
-                        hue = (dist * 0.002 + t * 2) % 1.0
-                        r, g, b = colorsys.hsv_to_rgb(hue, 1, 0.5)
-                        arr[y : y + 2, x : x + 4] = [int(r * 255), int(g * 255), int(b * 255)]
-                img = Image.fromarray(arr)
+                # Radial hue burst — fully vectorised (was O(W*H) Python loops)
+                ys = np.arange(0, H, 2, dtype=np.float32)[:, None]
+                xs = np.arange(0, W, 4, dtype=np.float32)[None, :]
+                dist = np.sqrt((xs - W // 2) ** 2 + (ys - H // 2) ** 2)
+                hue  = (dist * 0.002 + t * 2) % 1.0
+                small = hsv_s1_to_rgb_array(hue, v=0.5)        # (H/2, W/4, 3)
+                arr   = np.repeat(np.repeat(small, 2, axis=0), 4, axis=1)  # (H, W, 3)
+                img   = Image.fromarray(arr)
             else:
                 # mode 3: p1-tinted heavy noise
                 arr = np.random.randint(0, 200, (H, W, 3), dtype=np.uint8)
@@ -617,17 +634,17 @@ def act_climax(topic):
                     )
                 random.seed()
             elif mode == 2:
-                # Radial fade from center in p1
-                arr = np.zeros((H, W, 3), dtype=np.uint8)
-                cx, cy = W // 2, H // 2
-                max_d = math.sqrt(cx ** 2 + cy ** 2)
-                pulse = 0.6 + 0.4 * math.sin(t * math.pi * 4)
-                for y in range(0, H, 2):
-                    for x in range(0, W, 2):
-                        d_val = math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
-                        a = max(0, 1 - d_val / max_d) * pulse
-                        arr[y : y + 2, x : x + 2] = [clamp(p1[0] * a), clamp(p1[1] * a), clamp(p1[2] * a)]
-                img = Image.fromarray(arr)
+                # Radial fade from center in p1 — fully vectorised
+                cx, cy   = W // 2, H // 2
+                max_d    = math.sqrt(cx ** 2 + cy ** 2)
+                pulse    = 0.6 + 0.4 * math.sin(t * math.pi * 4)
+                ys = np.arange(0, H, 2, dtype=np.float32)[:, None]
+                xs = np.arange(0, W, 2, dtype=np.float32)[None, :]
+                a_small  = np.maximum(0.0, 1.0 - np.sqrt((xs - cx)**2 + (ys - cy)**2) / max_d) * pulse
+                rgb_col  = np.array([p1[0], p1[1], p1[2]], dtype=np.float32)
+                small    = np.clip(a_small[:, :, None] * rgb_col, 0, 255).astype(np.uint8)
+                arr      = np.repeat(np.repeat(small, 2, axis=0), 2, axis=1)
+                img      = Image.fromarray(arr)
             else:
                 # mode 3: edge glow in p2 on near-black
                 arr = np.zeros((H, W, 3), dtype=np.uint8)
@@ -735,7 +752,7 @@ def generate(topic_id, slot, out_dir):
 
     print(f"  Total: {len(all_frames)} frames = {len(all_frames)/FPS:.1f}s")
     for idx, frm in enumerate(all_frames):
-        frm.save(f"{frames_dir}/f{idx:05d}.png")
+        frm.save(f"{frames_dir}/f{idx:05d}.jpg", "JPEG", quality=95)
 
     wav = os.path.join(out_dir, "audio.wav")
     write_wav(wav, np.concatenate(all_audio))
@@ -748,7 +765,7 @@ def generate(topic_id, slot, out_dir):
             "-framerate",
             str(FPS),
             "-i",
-            f"{frames_dir}/f%05d.png",
+            f"{frames_dir}/f%05d.jpg",
             "-i",
             wav,
             "-c:v",

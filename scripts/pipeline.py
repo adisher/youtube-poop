@@ -189,6 +189,30 @@ def upload_video_to_release(video_path: str, run_id: str, title: str) -> str:
     return url
 
 
+def wait_for_gh_pages(page_url: str, timeout: int = 180):
+    """
+    Poll the review page URL until GitHub Pages serves it (HTTP 200).
+    Strips any hash fragment before checking.  Gives up after `timeout` seconds
+    and warns — the email is sent anyway so the user still gets notified.
+    """
+    import time as _time
+    check_url = page_url.split("#")[0]
+    print(f"  Waiting for GitHub Pages to deploy", end="", flush=True)
+    deadline = _time.time() + timeout
+    while _time.time() < deadline:
+        try:
+            req = urllib.request.Request(check_url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=10) as r:
+                if r.status == 200:
+                    print(" ✓ live", flush=True)
+                    return
+        except Exception:
+            pass
+        print(".", end="", flush=True)
+        _time.sleep(8)
+    print(f"\n  ⚠ Pages not live after {timeout}s — sending email anyway", flush=True)
+
+
 def commit_to_gh_pages(filename: str, content: str):
     """Clone gh-pages, write the file, commit, and push using git."""
     pat    = os.environ["GH_PAT"]
@@ -332,6 +356,9 @@ def run(slot: str, topic_id: str | None = None):
     pat        = os.environ["GH_PAT"]
     review_url = f"https://{owner}.github.io/{repo_name}/{filename}#{pat}"
     print(f"  ✓ Review page → {review_url}")
+
+    # 4b. Wait for GitHub Pages to deploy so the link in the email actually works
+    wait_for_gh_pages(review_url)
 
     # 5. Send email
     print("\n📧 Sending email...")
