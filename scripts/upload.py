@@ -25,8 +25,12 @@ def get_access_token():
     }).encode()
     req = urllib.request.Request(TOKEN_URL, data=payload,
                                   headers={"Content-Type": "application/x-www-form-urlencoded"})
-    with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())["access_token"]
+    try:
+        with urllib.request.urlopen(req) as r:
+            return json.loads(r.read())["access_token"]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"YouTube token refresh failed HTTP {e.code}: {body}") from e
 
 
 def upload_video(access_token, video_path, title, description, scheduled_utc=None, privacy="private"):

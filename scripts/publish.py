@@ -122,6 +122,13 @@ print(f"  ✓ Video downloaded ({os.path.getsize(tmp_path)//1024}KB)")
 # Upload to YouTube
 description = "#AIShorts #LLM #ArtificialIntelligence #MachineLearning #AILife #ChatGPT #FutureOfAI #DeepLearning #NeuralNetwork #AIExperience #AIConsciousness #LanguageModel"
 
+missing = [v for v in ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN")
+           if not os.environ.get(v)]
+if missing:
+    print(f"❌ Missing YouTube secrets: {', '.join(missing)}")
+    print("   Add them to GitHub → Settings → Secrets and variables → Actions")
+    sys.exit(1)
+
 token = up.get_access_token()
 video_id = up.upload_video(
     token, tmp_path, kit.get("title", "LLM Short"), description, privacy="public"
