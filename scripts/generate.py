@@ -719,13 +719,23 @@ def act_epilogue(topic):
 # ── Render ────────────────────────────────────────────────────────────────────
 
 
-def generate(topic_id, slot, out_dir):
+def generate(topic_id, slot, out_dir, *,
+             remnant_state=None, run_type="NORMAL", epilogue_extra=None):
     os.makedirs(out_dir, exist_ok=True)
     frames_dir = os.path.join(out_dir, "_frames")
     os.makedirs(frames_dir, exist_ok=True)
 
-    # Groq invents everything
-    topic = generate_topic()
+    # LLM invents everything; epilogue_extra injected on REMNANT runs
+    topic = generate_topic(epilogue_extra=epilogue_extra)
+
+    # REMNANT layer — inject boot line, advance narrative state
+    if run_type in ("REMNANT", "DORMANT") and remnant_state is not None:
+        import remnant as rem
+        if run_type == "REMNANT":
+            rem.apply_remnant(remnant_state, topic)
+        else:
+            rem.apply_dormant(remnant_state, topic)
+
     print(f"Title: {topic['title']}")
     print(
         f"Style: boot={topic['boot_style']} flood={topic['flood_style']} "

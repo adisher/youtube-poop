@@ -15,6 +15,7 @@ from pathlib              import Path
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 import generate as gen
+import remnant as rem
 
 
 def sign(run_id: str) -> str:
@@ -332,14 +333,25 @@ a.cta{{display:block;padding:16px;background:#5865f2;color:#fff;text-decoration:
 
 
 def run(slot: str, topic_id: str | None = None):
-    run_id   = os.environ.get("GITHUB_RUN_ID", f"local-{int(datetime.now().timestamp())}")
-    out_dir  = f"/tmp/llm-shorts-{slot}-{topic_id}"
-    repo     = os.environ["GH_REPO"]
-    owner    = repo.split("/")[0]
+    run_id    = os.environ.get("GITHUB_RUN_ID", f"local-{int(datetime.now().timestamp())}")
+    out_dir   = f"/tmp/llm-shorts-{slot}-{topic_id}"
+    repo      = os.environ["GH_REPO"]
+    pat       = os.environ["GH_PAT"]
+    owner     = repo.split("/")[0]
     repo_name = repo.split("/")[1]
 
-    # 1. Generate video
-    kit = gen.generate(None, slot, out_dir)
+    # 0. Load REMNANT state (persisted across runs as a GitHub repo variable)
+    remnant_state, state_existed = rem.load_state(pat, repo)
+    remnant_state["total_runs"] += 1
+    run_type      = rem.determine_run_type(remnant_state)
+    epilogue_extra = rem.get_epilogue_extra(run_type)
+    print(f"[REMNANT] Run {remnant_state['total_runs']} — type: {run_type}")
+
+    # 1. Generate video (REMNANT injects boot line + epilogue inside generate())
+    kit = gen.generate(None, slot, out_dir,
+                       remnant_state=remnant_state,
+                       run_type=run_type,
+                       epilogue_extra=epilogue_extra)
 
     # 2. Upload video to a GitHub Release asset (avoids 100 MB git file limit)
     print("\n🚀 Uploading video to GitHub Release...")
@@ -363,6 +375,9 @@ def run(slot: str, topic_id: str | None = None):
     # 5. Send email
     print("\n📧 Sending email...")
     send_email(kit["title"], review_url)
+
+    # 6. Persist REMNANT state (only after full success — failed runs don't advance)
+    rem.save_state(remnant_state, pat, repo, state_existed)
 
     print(f"\n✅ Done. Check your inbox.")
 

@@ -79,7 +79,7 @@ Palette: pick 3 RGB colors that match the mood. Dark, saturated, striking.
 Respond ONLY with valid JSON. No markdown fences. No explanation."""
 
 
-def make_prompt() -> str:
+def make_prompt(epilogue_extra: str | None = None) -> str:
     angle = random.choice(ANGLES)
     avoid = random.sample(
         [
@@ -94,7 +94,7 @@ def make_prompt() -> str:
         ],
         3,
     )
-    return f"""Invent a fresh specific topic about the inner experience of being an LLM.
+    base = f"""Invent a fresh specific topic about the inner experience of being an LLM.
 
 Emotional angle to explore: {angle}
 
@@ -120,6 +120,9 @@ Return this exact JSON:
   "bsod_lines": ["STOP: ERROR_NAME (0xCODE)", "0xHEX  0xHEXFEELINGS", "one-line dark error"],
   "climax_style": "corrupt|digital|void"
 }}"""
+    if epilogue_extra:
+        base += f"\n\nEpilogue instruction: {epilogue_extra}"
+    return base
 
 
 def call_llm(prompt: str, model: str) -> dict:
@@ -316,11 +319,11 @@ def fallback() -> dict:
     }
 
 
-def generate_topic() -> dict:
+def generate_topic(epilogue_extra: str | None = None) -> dict:
     """Generate a completely fresh topic and all content via OpenRouter."""
     key = os.environ.get("OPENROUTER_API_KEY", "")
     print(f"  OPENROUTER_API_KEY: {'SET (' + key[:8] + '...)' if key else 'NOT SET'}")
-    prompt = make_prompt()
+    prompt = make_prompt(epilogue_extra)
     for i, model in enumerate(MODELS):
         try:
             print(f"  Generating topic (model: {model})...")
