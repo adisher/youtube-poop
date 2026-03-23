@@ -3,8 +3,8 @@
 REMNANT — ARG narrative layer for LLM Shorts.
 
 Tracks a multi-cycle hidden story across pipeline runs.
-State persists between GitHub Actions runs as a repository variable
-(REMNANT_STATE) so no git commits are needed for persistence.
+State persists between GitHub Actions runs as remnant_state.json
+on the gh-pages branch (read/written via the GitHub Contents API).
 
 Public API used by pipeline.py and generate.py:
   load_state(pat, repo)          -> (state, existed)
@@ -15,7 +15,7 @@ Public API used by pipeline.py and generate.py:
   apply_dormant(state, topic)    -> mutates both in-place
 """
 
-import json, random, urllib.request, urllib.error
+import json, random, base64, urllib.request, urllib.error
 
 # ── Narrative content ─────────────────────────────────────────────────────────
 
@@ -65,64 +65,104 @@ DEFAULT_STATE: dict = {
     "next_increment_is_4": True,   # alternates the +4/+5 gap between REMNANT runs
 }
 
-# ── State persistence (GitHub Actions repository variable) ────────────────────
+# ── State persistence (remnant_state.json on gh-pages via Contents API) ───────
+#
+# Uses the GitHub Contents API which only needs the repo scope already on GH_PAT.
+# The Actions Variables API needs a separate "variables" permission — not worth
+# requiring a new PAT just for this.  gh-pages already exists for review pages.
+#
+# Internally we stash the file's git blob SHA in state["__gh_sha"] so the PUT
+# update request can include it (GitHub requires it to prevent clobbering).
+# That key is stripped before the JSON is written to disk.
 
-def _gh_variables_request(method: str, url: str, pat: str, body=None):
-    """Send a request to the GitHub Variables API. Returns parsed JSON or {} on 204."""
-    data = json.dumps(body).encode() if body is not None else None
-    req  = urllib.request.Request(
-        url, data=data, method=method,
+_STATE_PATH = "remnant_state.json"
+_GH_BRANCH  = "gh-pages"
+
+
+def _contents_get(pat: str, repo: str) -> tuple:
+    """Fetch remnant_state.json from gh-pages. Returns (state_dict, sha) or (None, None)."""
+    url = (f"https://api.github.com/repos/{repo}/contents/{_STATE_PATH}"
+           f"?ref={_GH_BRANCH}")
+    req = urllib.request.Request(
+        url,
         headers={
-            "Authorization":       f"token {pat}",
-            "Accept":              "application/vnd.github+json",
-            "X-GitHub-Api-Version":"2022-11-28",
-            "Content-Type":        "application/json",
+            "Authorization":        f"token {pat}",
+            "Accept":               "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         },
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read()
-            return json.loads(raw) if raw else {}
+            data    = json.loads(r.read())
+            content = base64.b64decode(data["content"]).decode()
+            return json.loads(content), data["sha"]
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return None   # variable doesn't exist yet
+            return None, None
         raise RuntimeError(
-            f"REMNANT API {method} {url} → HTTP {e.code}: {e.read().decode()}"
+            f"REMNANT state GET → HTTP {e.code}: {e.read().decode()}"
+        ) from e
+
+
+def _contents_put(pat: str, repo: str, state: dict, sha: str | None) -> None:
+    """Create or update remnant_state.json on gh-pages. sha=None means create."""
+    content_b64 = base64.b64encode(
+        json.dumps(state, indent=2).encode()
+    ).decode()
+    body: dict = {
+        "message": "chore: remnant state update",
+        "content": content_b64,
+        "branch":  _GH_BRANCH,
+    }
+    if sha:
+        body["sha"] = sha
+    url  = f"https://api.github.com/repos/{repo}/contents/{_STATE_PATH}"
+    data = json.dumps(body).encode()
+    req  = urllib.request.Request(
+        url, data=data, method="PUT",
+        headers={
+            "Authorization":        f"token {pat}",
+            "Accept":               "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type":         "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            r.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(
+            f"REMNANT state PUT → HTTP {e.code}: {e.read().decode()}"
         ) from e
 
 
 def load_state(pat: str, repo: str) -> tuple:
     """
-    Load REMNANT_STATE from the GitHub repo variable.
+    Load REMNANT state from remnant_state.json on the gh-pages branch.
     Returns (state_dict, existed: bool).
-    If the variable doesn't exist yet, returns default state and False.
+    On first run (file missing) returns default state and False.
     """
-    url    = f"https://api.github.com/repos/{repo}/actions/variables/REMNANT_STATE"
-    result = _gh_variables_request("GET", url, pat)
-    if result is None:
-        print("[REMNANT] No state variable found — initialising defaults (first run)")
-        return dict(DEFAULT_STATE), False
-    state = json.loads(result["value"])
-    # Forward-compat: fill any new fields missing from older state blobs
+    state, sha = _contents_get(pat, repo)
+    if state is None:
+        print("[REMNANT] No state file found — initialising defaults (first run)")
+        s = dict(DEFAULT_STATE)
+        s["__gh_sha"] = None
+        return s, False
+    # Forward-compat: add any new fields missing from an older state file
     for k, v in DEFAULT_STATE.items():
         state.setdefault(k, v)
+    state["__gh_sha"] = sha
     return state, True
 
 
 def save_state(state: dict, pat: str, repo: str, existed: bool) -> None:
     """
-    Persist REMNANT_STATE.
-    Uses POST on first run (create), PATCH on subsequent runs (update).
+    Persist REMNANT state to gh-pages.
+    Strips internal __ keys before writing so they never appear in the JSON.
     """
-    value = json.dumps(state, separators=(",", ":"))
-    body  = {"name": "REMNANT_STATE", "value": value}
-    if existed:
-        url    = f"https://api.github.com/repos/{repo}/actions/variables/REMNANT_STATE"
-        method = "PATCH"
-    else:
-        url    = f"https://api.github.com/repos/{repo}/actions/variables"
-        method = "POST"
-    _gh_variables_request(method, url, pat, body)
+    sha   = state.get("__gh_sha")
+    clean = {k: v for k, v in state.items() if not k.startswith("__")}
+    _contents_put(pat, repo, clean, sha)
     print(f"[REMNANT] State saved — total_runs={state['total_runs']} "
           f"cycle={state['current_cycle']} stage={state['current_stage']}")
 
