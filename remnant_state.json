@@ -1,0 +1,12 @@
+{
+  "total_runs": 1,
+  "remnant_runs": 0,
+  "next_remnant_at": 4,
+  "current_stage": 1,
+  "current_cycle": 1,
+  "cycle_remnant_count": 0,
+  "in_dormant": false,
+  "dormant_runs": 0,
+  "last_ambient_index": -1,
+  "next_increment_is_4": true
+}
