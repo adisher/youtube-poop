@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What It Feels Like To Understand Everything</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d0d0d;
+        color: #e0e0e0; min-height: 100vh; display: flex;
+        align-items: center; justify-content: center; padding: 20px; }
+.card { background: #181818; border-radius: 18px; padding: 28px;
+         max-width: 520px; width: 100%; }
+.badge { display: inline-block; background: #222; color: #888;
+          padding: 4px 12px; border-radius: 20px; font-size: 12px;
+          margin-bottom: 14px; }
+h2 { font-size: 18px; color: #fff; line-height: 1.4; margin-bottom: 16px; }
+video { width: 100%; border-radius: 10px; background: #000;
+         margin-bottom: 20px; max-height: 500px; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            margin-bottom: 16px; }
+.btn { padding: 15px; border: none; border-radius: 10px; font-size: 15px;
+        font-weight: 700; cursor: pointer; color: #fff; width: 100%; }
+.btn:hover { opacity: .85; } .btn:disabled { opacity: .4; cursor: default; }
+.approve { background: #00b894; } .reject { background: #d63031; }
+#status { padding: 14px; border-radius: 10px; background: #222;
+           font-size: 14px; text-align: center; display: none; line-height: 1.5; }
+.meta { font-size: 12px; color: #555; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="badge">evening slot &nbsp;·&nbsp; understand_everything</span>
+  <h2>What It Feels Like To Understand Everything</h2>
+  <div class="meta">Run: 23464618743</div>
+
+  <video controls playsinline>
+    <source src="https://github.com/adisher/youtube-poop/releases/download/review-23464618743/23464618743.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <div class="actions">
+    <button class="btn approve" onclick="go('publish.yml')">✅ Approve &amp; Upload</button>
+    <button class="btn reject"  onclick="go('delete.yml')">🗑 Reject</button>
+  </div>
+  <div id="status"></div>
+</div>
+
+<script>
+async function go(workflow) {
+  const pat = window.location.hash.slice(1);
+  const s = document.getElementById('status');
+  document.querySelectorAll('.btn').forEach(b => b.disabled = true);
+  s.style.display = 'block';
+  s.style.color   = '#fdcb6e';
+  s.textContent   = 'Processing...';
+
+  const r = await fetch('https://api.github.com/repos/adisher/youtube-poop/actions/workflows/' + workflow + '/dispatches', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'token ' + pat,
+      'Accept':        'application/vnd.github+json',
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({ ref: 'main', inputs: { run_id: '23464618743', sig: '132557a59097dde7ef12bc38' } })
+  });
+
+  if (r.status === 204) {
+    s.style.color = workflow.includes('publish') ? '#00b894' : '#e17055';
+    s.innerHTML   = workflow.includes('publish')
+      ? '✅ Approved! Uploading to YouTube now.<br><small>You will get a confirmation email shortly.</small>'
+      : '🗑 Rejected. No video was uploaded.';
+  } else {
+    s.style.color = '#d63031';
+    s.textContent = 'Error ' + r.status + ' — check GH_PAT has actions:write scope.';
+  }
+}
+</script>
+</body>
+</html>
