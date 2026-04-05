@@ -2,12 +2,13 @@ name: Daily Pipeline
 
 on:
   schedule:
-    - cron: "30 15 * * *"   # 10:30 AM ET
-    - cron: "0 23 * * *"    # 06:00 PM ET
+    - cron: "5 12 * * *"    # morning   — 12:05 UTC / 8:05 AM ET
+    - cron: "5 17 * * *"    # afternoon — 17:05 UTC / 1:05 PM ET
+    - cron: "5 22 * * *"    # evening   — 22:05 UTC / 6:05 PM ET
   workflow_dispatch:
     inputs:
       slot:
-        description: "morning or evening"
+        description: "morning, afternoon, or evening"
         default: "morning"
       topic:
         description: "Topic ID (blank = random)"
@@ -33,7 +34,13 @@ jobs:
             echo "slot=${{ github.event.inputs.slot }}" >> $GITHUB_OUTPUT
           else
             HOUR=$(date -u +%H)
-            [ "$HOUR" = "15" ] && echo "slot=morning" >> $GITHUB_OUTPUT || echo "slot=evening" >> $GITHUB_OUTPUT
+            if [ "$HOUR" = "12" ]; then
+              echo "slot=morning" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" = "17" ]; then
+              echo "slot=afternoon" >> $GITHUB_OUTPUT
+            else
+              echo "slot=evening" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Run pipeline

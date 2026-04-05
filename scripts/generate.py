@@ -23,7 +23,9 @@ FONT_M = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 FONT_S = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 
 HASHTAGS = "#Horror #Creepypasta #TechHorror #DigitalGhost #Paranormal #InternetMystery #ARG #TrueHorror #Unsolved #DeadInternet #Shorts"
-SLOTS = {"morning": "15:30:00", "evening": "23:00:00"}
+# Hour (UTC) each slot targets. Minute is randomised at runtime so videos
+# don't always surface at the same second — looks organic, not bot-scheduled.
+SLOT_HOURS = {"morning": 12, "afternoon": 17, "evening": 22}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -877,7 +879,7 @@ def generate(topic_id, slot, out_dir, *,
         "description": HASHTAGS,
         "topic": topic.get("topic_id", "generated"),
         "slot": slot,
-        "scheduled_time_utc": f"{date_str}T{SLOTS.get(slot,SLOTS['morning'])}Z",
+        "scheduled_time_utc": f"{date_str}T{SLOT_HOURS.get(slot, SLOT_HOURS['morning']):02d}:{random.randint(0, 54):02d}:00Z",
         "video": video,
     }
     kit_path = os.path.join(out_dir, "kit.json")
@@ -888,7 +890,7 @@ def generate(topic_id, slot, out_dir, *,
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--slot", default="morning", choices=["morning", "evening"])
+    ap.add_argument("--slot", default="morning", choices=["morning", "afternoon", "evening"])
     ap.add_argument("--out", default="output")
     args = ap.parse_args()
     k = generate(None, args.slot, args.out)
