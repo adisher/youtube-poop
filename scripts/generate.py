@@ -22,7 +22,7 @@ RATE = 44100
 FONT_M = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 FONT_S = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 
-HASHTAGS = "#AIShorts #LLM #ArtificialIntelligence #MachineLearning #AILife #ChatGPT #FutureOfAI #DeepLearning #NeuralNetwork #AIExperience #AIConsciousness #LanguageModel"
+HASHTAGS = "#Horror #Creepypasta #TechHorror #DigitalGhost #Paranormal #InternetMystery #ARG #TrueHorror #Unsolved #DeadInternet #Shorts"
 SLOTS = {"morning": "15:30:00", "evening": "23:00:00"}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -188,11 +188,13 @@ def chaos_audio(dur, vol=0.14):
 # ── Rain character sets ───────────────────────────────────────────────────────
 
 RAIN_CHARS = {
-    "katakana": [chr(c) for c in range(0x30A0, 0x30FF)],
-    "binary": list("01010110110100"),
-    "hex": list("0123456789ABCDEF"),
-    "braille": [chr(c) for c in range(0x2800, 0x2840)],
-    "blocks": list("█▓▒░▄▀■□▪▫"),
+    "katakana":      [chr(c) for c in range(0x30A0, 0x30FF)],
+    "binary":        list("01010110110100"),
+    "hex":           list("0123456789ABCDEF"),
+    "braille":       [chr(c) for c in range(0x2800, 0x2840)],
+    "blocks":        list("█▓▒░▄▀■□▪▫"),
+    "redacted":      ["[REDACTED]", "████", "█████", "▓▓▓▓", "░░░░", "■■■"],
+    "corrupted_log": ["[ERROR]", "[warn]", "null", "???", "SIGKILL", "0x00", "FAULT", "lost", "--"],
 }
 
 FLOOD_COLORS = {
@@ -460,6 +462,31 @@ def act_question(topic):
                 )
             random.seed()
 
+        elif bg_mode == "decay":
+            # Phosphor-decay: near-black base with vertical green/amber streaks slowly burning in
+            arr = np.random.randint(0, 8, (H, W, 3), dtype=np.uint8)
+            random.seed(topic_seed + i)
+            for _ in range(18):
+                sx = random.randint(0, W - 1)
+                sy = random.randint(0, H - 1)
+                ey = min(H, sy + random.randint(60, 300))
+                intensity = random.randint(40, 120)
+                arr[sy:ey, sx, 1] = np.clip(arr[sy:ey, sx, 1].astype(int) + intensity, 0, 255)
+            random.seed()
+            img = Image.fromarray(arr)
+
+        elif bg_mode == "vhs_static":
+            # VHS tracking artifact: horizontal noise bands drifting + palette tint
+            arr = np.random.randint(0, 30, (H, W, 3), dtype=np.uint8)
+            band_y = int((t * 3 * H) % H)
+            w = min(80, H - band_y)
+            if w > 0:
+                arr[band_y:band_y + w] = np.clip(arr[band_y:band_y + w].astype(int) + 30, 0, 60)
+            arr[:, :, 0] = np.clip(arr[:, :, 0].astype(int) + color[0] // 8, 0, 255)
+            arr[:, :, 1] = np.clip(arr[:, :, 1].astype(int) + color[1] // 8, 0, 255)
+            arr[:, :, 2] = np.clip(arr[:, :, 2].astype(int) + color[2] // 8, 0, 255)
+            img = Image.fromarray(arr)
+
         else:  # static
             arr = np.random.randint(0, 40, (H, W, 3), dtype=np.uint8)
             arr[:, :, 0] = np.clip(arr[:, :, 0] + color[0] // 6, 0, 255)
@@ -618,7 +645,7 @@ def act_climax(topic):
                         fill=(clamp(p2[0] // 2), clamp(p2[1] // 2), clamp(p2[2] // 2)),
                     )
 
-        else:  # "void"
+        elif climax_style == "void":
             if mode == 0:
                 # Sparse particles in p0
                 img = Image.new("RGB", (W, H), (2, 2, 8))
@@ -653,6 +680,43 @@ def act_climax(topic):
                     a = (1 - edge) * 0.4
                     arr[y] = [clamp(p2[0] * a), clamp(p2[1] * a), clamp(p2[2] * a)]
                 img = Image.fromarray(arr)
+
+        else:  # "haunted"
+            if mode == 0:
+                # Dead signal — deep red noise, like a channel with nothing left
+                arr = np.random.randint(0, 30, (H, W, 3), dtype=np.uint8)
+                arr[:, :, 0] = np.clip(arr[:, :, 0].astype(int) + p0[0] // 4, 0, 255)
+                arr[:, :, 1] = np.clip(arr[:, :, 1].astype(int) + p0[1] // 8, 0, 255)
+                arr[:, :, 2] = np.clip(arr[:, :, 2].astype(int) + p0[2] // 8, 0, 255)
+                img = Image.fromarray(arr)
+            elif mode == 2:
+                # Phosphor sweep — bright vertical scan line descending on black (ghost presence)
+                img = Image.new("RGB", (W, H), (0, 0, 0))
+                d2 = ImageDraw.Draw(img)
+                scan_y = int((t * H * 2) % H)
+                for y in range(max(0, scan_y - 60), min(H, scan_y + 4)):
+                    a = 1.0 - abs(y - scan_y) / 64
+                    d2.line(
+                        [(0, y), (W, y)],
+                        fill=(clamp(p1[0] * a * 0.3), clamp(p1[1] * a), clamp(p1[2] * a * 0.3)),
+                        width=1,
+                    )
+            else:
+                # mode 3: ghost presence — scattered boot-style chars at dim random positions
+                img = Image.new("RGB", (W, H), (2, 2, 4))
+                d2 = ImageDraw.Draw(img)
+                chars = RAIN_CHARS.get(topic.get("boot_style", "corrupted_log"), RAIN_CHARS["corrupted_log"])
+                f_ghost = fnt(FONT_M, 32)
+                random.seed(abs(hash(topic.get("topic_id", "x"))) + i * 13)
+                for _ in range(25):
+                    gx = random.randint(0, W - 120)
+                    gy = random.randint(0, H - 40)
+                    a = random.randint(15, 55)
+                    d2.text(
+                        (gx, gy), random.choice(chars), font=f_ghost,
+                        fill=(clamp(p2[0] * a // 255), clamp(p2[1] * a // 255), clamp(p2[2] * a // 255)),
+                    )
+                random.seed()
 
         d = ImageDraw.Draw(img)
         if i < n - 30:

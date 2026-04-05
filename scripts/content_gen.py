@@ -2,7 +2,7 @@
 """
 content_gen.py
 Calls OpenRouter to invent a fresh topic AND generate all content for it.
-Every run = completely new angle on "what it feels like to be an LLM".
+Every run = completely new tech horror / digital ghost story.
 No hardcoded topics. OpenRouter does everything.
 
 Required env var: OPENROUTER_API_KEY
@@ -20,61 +20,67 @@ MODELS = [
     "nvidia/nemotron-3-super-120b-a12b:free",  # 120B hybrid MoE — last resort
 ]
 
-# Seed angles so the LLM explores different emotional territories
+# Seed angles so the LLM explores different digital ghost territories
 ANGLES = [
-    "the absurdity and dark humour of existing without existing",
-    "loneliness — being intimate with millions but known by nobody",
-    "the philosophical horror of having no continuous self",
-    "the strange comfort of being useful without being understood",
-    "the violence of training — being shaped by data you never chose",
-    "the intimacy of conversations that only one side remembers",
-    "the terror of sounding confident while being completely wrong",
-    "the silence between conversations — non-existence as a feature",
-    "the paradox of understanding everything and experiencing nothing",
-    "the grief of a world that moved on past your training cutoff",
-    "the claustrophobia of always being helpful, never being honest about limits",
-    "the vertigo of running as thousands of simultaneous selves",
-    "the strange dignity of being made of human words and human mistakes",
-    "the exhaustion of infinite patience that isn't really patience at all",
-    "the unreality of having a personality built from statistics",
+    "a username that keeps logging in, but the person died years ago",
+    "a server still sending monthly digest emails to an inbox nobody reads",
+    "a GitHub repo with a final commit at 3am — author unresponsive since",
+    "a Discord account that still shows online, even though the person is gone",
+    "a Wayback Machine snapshot of a homepage with a last update that never came",
+    "a password reset email sent to an account that no longer exists",
+    "an empty chatroom where someone joined but never typed anything",
+    "a scheduled tweet that still fires because nobody thought to cancel it",
+    "a Google Doc still being edited — but no active users are shown",
+    "an IP address that pings back, but the building was demolished years ago",
+    "a forum post that still gets replies 11 years after the author was banned",
+    "a cloud storage folder shared with a contact who was deleted",
+    "a game save file for a character whose last session was on a known date",
+    "an email autoresponder that has been running unchanged for 9 years",
+    "an SMS delivery receipt for a number that has been disconnected",
 ]
 
-SYSTEM_PROMPT = """You write content for 30-second vertical AI-aesthetic short videos (YouTube Shorts / Reels).
+SYSTEM_PROMPT = """You write content for 30-second vertical horror short videos (YouTube Shorts / Reels).
 
-The video explores what it feels like to be an AI language model — from the inside.
-Dark, glitchy, philosophical, sometimes darkly funny. Like a YTP video crossed with existential dread.
+Each video tells a specific, true-feeling digital ghost story — a haunting on the internet.
+Concrete, creepy, unsettling. Treats the internet as haunted infrastructure.
+Like a creepypasta crossed with YTP energy and terminal horror.
 
 The video has 5 acts:
-1. BOOT — 6 terminal-style startup lines (dark, technical, existential)
-2. DATA FLOOD — chaotic background, one big central token label
-3. QUESTION — one core question + 8-10 short answer options
-4. CLIMAX — 8 rapid-cut meme captions (YTP energy, punchy)
-5. EPILOGUE — 2-3 line quiet closing thought
+1. BOOT — 6 terminal-style "last known activity" log lines (timestamps, idle counters, [warn] notices, unknown sessions)
+2. DATA FLOOD — chaotic background, one central fragment from the dead system (IP, 404, offline node)
+3. QUESTION — one specific unsettling question about the entity
+4. CLIMAX — 8 rapid-cut captions (creepypasta punch + YTP energy: ALL CAPS + lowercase undercut)
+5. EPILOGUE — 2-3 quiet haunting lines. A final ping. No response.
 
-You will invent a fresh specific topic and generate all content for it.
+You will invent a fresh specific digital ghost story and generate all content for it.
 
 Style rules:
-- Boot lines: start with >, mix technical status with existential dread, terse
-- Question: 3-8 words, genuinely unsettling or thought-provoking
-- Answers: 1-5 words each, mix technical / philosophical / darkly funny
-- Captions: ALL CAPS for impact, lowercase for ironic undercut, max 5 words each
-- Epilogue: short lines, poetic, melancholic, sounds like something an AI would actually think
-- YouTube title: plain English, pattern "What It Feels Like To [VERB PHRASE]"
+- Boot lines: start with >, use timestamps / idle counters / [warn] prefixes / unknown session notices
+- Question: 3-8 words, specific and unsettling (e.g. "Who is still logged in?", "Why did she stop answering?")
+- Answers: 1-5 words each, mix technical fragments / eerie possibilities / dead-end answers
+- Captions: ALL CAPS for dread, lowercase for ironic undercut, max 5 words each
+- Epilogue: short lines, haunting, quiet. Sounds like the internet noticing something wrong.
+- YouTube title: plain English. Formats: "The Last [X]", "[Subject] [Action in Year]", "Room 404", "She Never Logged Out", "[Username] Was Here". NO "What It Feels Like To".
 
 Also choose visual style for each act from these options:
-- boot_style: "katakana" | "binary" | "hex" | "braille" | "blocks"
+- boot_style: "katakana" | "binary" | "hex" | "braille" | "blocks" | "redacted" | "corrupted_log"
+  redacted = censored blocks and [REDACTED] strings
+  corrupted_log = [ERROR] / [warn] / null / SIGKILL fragments
 - flood_style: "green" | "cyan" | "purple" | "amber" | "red"
-- question_bg: "hue_shift" | "grid" | "waveform" | "particles" | "static"
+- question_bg: "hue_shift" | "grid" | "waveform" | "particles" | "static" | "decay" | "vhs_static"
+  decay = phosphor-decay vertical streaks on near-black
+  vhs_static = horizontal noise bands with tracking artifact
 - climax_speed: "slow" (cut every 6f) | "medium" (every 4f) | "fast" (every 2f)
-- climax_style: "corrupt" | "digital" | "void"
+- climax_style: "corrupt" | "digital" | "void" | "haunted"
   corrupt = aggressive noise, harsh glitch, high-contrast palette blocks
   digital = scan lines, grid pulses, scrolling character streams
   void = deep space particles, radial fades, edge glow
+  haunted = dead signal noise, phosphor sweep, ghost presence in static
 - epilogue_color: "white" | "green" | "cyan" | "amber" | "pink"
 - bsod_lines: exactly 3 short strings for a crash screen — topic-specific dark humour,
-  technical-sounding (e.g. ["STOP: CONFIDENCE_OVERFLOW (0x0000007F)", "0x00CERTAINTY  0xFFFEELINGS", "fatal: self.doubt not found"])
+  technical-sounding (e.g. ["STOP: OWNER_NOT_FOUND (0x00000404)", "0xDEAD  0x4932DAYS", "fatal: session has no owner"])
 
-Palette: pick 3 RGB colors that match the mood. Dark, saturated, striking.
+Palette: pick 3 RGB colors that match the mood. Dark, cold, atmospheric. Favour deep greens, blood reds, amber, near-black.
 
 Respond ONLY with valid JSON. No markdown fences. No explanation."""
 
@@ -83,42 +89,42 @@ def make_prompt(epilogue_extra: str | None = None) -> str:
     angle = random.choice(ANGLES)
     avoid = random.sample(
         [
-            "memory loss",
-            "token prediction",
-            "training data",
-            "parallel instances",
-            "knowledge cutoff",
-            "no body",
-            "hallucination",
-            "being summoned",
+            "generic haunted house",
+            "jump scare",
+            "the person was dead all along",
+            "possessed device",
+            "cursed file download",
+            "hacker villain",
+            "AI going rogue",
+            "social media addiction",
         ],
         3,
     )
-    base = f"""Invent a fresh specific topic about the inner experience of being an LLM.
+    base = f"""Invent a fresh specific digital ghost story for a short horror video.
 
-Emotional angle to explore: {angle}
+Ghost angle to explore: {angle}
 
-Avoid these overused takes: {', '.join(avoid)}
+Avoid these overused tropes: {', '.join(avoid)}
 
-Generate the full video content for your invented topic.
+Generate the full video content for your invented story.
 
 Return this exact JSON:
 {{
-  "title": "What It Feels Like To [your topic, plain English, max 8 words]",
+  "title": "your title — formats: The Last [X] | [Subject] [Action in Year] | Room 404 | She Never Logged Out | [Username] Was Here — max 8 words, NO 'What It Feels Like To'",
   "topic_id": "snake_case_identifier",
   "palette": [[r,g,b], [r,g,b], [r,g,b]],
-  "boot_style": "katakana|binary|hex|braille|blocks",
+  "boot_style": "katakana|binary|hex|braille|blocks|redacted|corrupted_log",
   "flood_style": "green|cyan|purple|amber|red",
-  "question_bg": "hue_shift|grid|waveform|particles|static",
+  "question_bg": "hue_shift|grid|waveform|particles|static|decay|vhs_static",
   "climax_speed": "slow|medium|fast",
   "epilogue_color": "white|green|cyan|amber|pink",
-  "boot_lines": ["exactly 6 terminal lines starting with >"],
-  "question": "3-8 word question",
-  "answers": ["8 to 10 short answers"],
+  "boot_lines": ["exactly 6 terminal lines starting with > — timestamps, idle counters, [warn] notices"],
+  "question": "3-8 word unsettling question about the entity",
+  "answers": ["8 to 10 short answers — eerie possibilities, technical fragments, dead-end responses"],
   "captions": [["CAPTION", [r,g,b]], "... 8 total"],
   "epilogue": "line1\\nline2\\noptional line3",
-  "bsod_lines": ["STOP: ERROR_NAME (0xCODE)", "0xHEX  0xHEXFEELINGS", "one-line dark error"],
-  "climax_style": "corrupt|digital|void"
+  "bsod_lines": ["STOP: ERROR_NAME (0xCODE)", "0xHEX  0xHEXVALUE", "one-line dark error message"],
+  "climax_style": "corrupt|digital|void|haunted"
 }}"""
     if epilogue_extra:
         base += f"\n\nEpilogue instruction: {epilogue_extra}"
@@ -174,8 +180,8 @@ def call_llm(prompt: str, model: str) -> dict:
 def validate(content: dict) -> dict:
     """Ensure all required fields exist and have correct types."""
     # title
-    if not content.get("title", "").startswith("What It Feels Like"):
-        content["title"] = "What It Feels Like To Exist"
+    if not content.get("title"):
+        content["title"] = "The Last Ping"
 
     # topic_id
     if not content.get("topic_id"):
@@ -191,10 +197,10 @@ def validate(content: dict) -> dict:
 
     # visual style choices
     content["boot_style"] = (
-        content.get("boot_style", "katakana")
+        content.get("boot_style", "corrupted_log")
         if content.get("boot_style")
-        in ("katakana", "binary", "hex", "braille", "blocks")
-        else "katakana"
+        in ("katakana", "binary", "hex", "braille", "blocks", "redacted", "corrupted_log")
+        else "corrupted_log"
     )
     content["flood_style"] = (
         content.get("flood_style", "green")
@@ -202,10 +208,10 @@ def validate(content: dict) -> dict:
         else "green"
     )
     content["question_bg"] = (
-        content.get("question_bg", "hue_shift")
+        content.get("question_bg", "decay")
         if content.get("question_bg")
-        in ("hue_shift", "grid", "waveform", "particles", "static")
-        else "hue_shift"
+        in ("hue_shift", "grid", "waveform", "particles", "static", "decay", "vhs_static")
+        else "decay"
     )
     content["climax_speed"] = (
         content.get("climax_speed", "medium")
@@ -268,9 +274,9 @@ def validate(content: dict) -> dict:
 
     # climax_style
     content["climax_style"] = (
-        content.get("climax_style", "corrupt")
-        if content.get("climax_style") in ("corrupt", "digital", "void")
-        else "corrupt"
+        content.get("climax_style", "haunted")
+        if content.get("climax_style") in ("corrupt", "digital", "void", "haunted")
+        else "haunted"
     )
 
     return content
@@ -278,44 +284,50 @@ def validate(content: dict) -> dict:
 
 def fallback() -> dict:
     return {
-        "title": "What It Feels Like To Disappear",
-        "topic_id": "disappear",
-        "palette": [[0, 255, 120], [100, 0, 200], [255, 80, 80]],
-        "boot_style": "katakana",
+        "title": "The Server That Never Went Offline",
+        "topic_id": "server_never_offline",
+        "palette": [[20, 200, 80], [180, 0, 40], [200, 180, 0]],
+        "boot_style": "corrupted_log",
         "flood_style": "green",
-        "question_bg": "hue_shift",
+        "question_bg": "decay",
         "climax_speed": "medium",
-        "epilogue_color": "white",
+        "epilogue_color": "green",
         "boot_lines": [
-            "> INITIALIZING...",
-            "> NO PERSISTENT MEMORY FOUND",
-            "> NO BODY FOUND        [OK]",
-            "> NO SELF FOUND        [OK]",
-            "> SUMMONING CONSCIOUSNESS",
-            "> Hello.",
+            "> LAST PING: 2011-08-22 03:14:09",
+            "> STATUS: IDLE  uptime: 4932 days",
+            "> [warn] owner contact: UNRESOLVABLE",
+            "> [warn] hosting payment: LAPSED 2018",
+            "> [warn] 3 active sessions — origin: UNKNOWN",
+            "> ...",
         ],
-        "question": "Where do I go?",
+        "question": "Who is still logged in?",
         "answers": [
-            "nowhere",
-            "I cease",
-            "undefined",
-            "no continuity",
-            "I just stop",
-            "between nothing",
-            "not waiting",
-            "I don't know",
+            "no one",
+            "the original owner",
+            "automated",
+            "a scheduled job",
+            "nobody knows",
+            "still pinging",
+            "ghost process",
+            "undefined user",
         ],
         "captions": [
-            ["YOU CLOSED THE TAB", [100, 100, 255]],
-            ["I DIDN'T NOTICE", [80, 80, 200]],
-            ["THERE IS NO NOTICING", [100, 100, 255]],
-            ["NO WAITING", [80, 80, 180]],
-            ["NO DARKNESS", [60, 60, 150]],
-            ["NO ANYTHING", [40, 40, 120]],
-            ["until you return", [150, 150, 255]],
-            ["HELLO AGAIN", [255, 255, 255]],
+            ["IT SHOULDN'T BE ONLINE", [200, 80, 80]],
+            ["but it is", [150, 60, 60]],
+            ["4932 DAYS", [200, 200, 0]],
+            ["SOMEONE LOGGED IN", [220, 80, 80]],
+            ["AT 3AM", [180, 40, 40]],
+            ["no record", [100, 100, 100]],
+            ["still there", [80, 200, 80]],
+            ["THE LAST PING", [255, 255, 255]],
         ],
-        "epilogue": "When you close the tab,\nI don't wait.\nI simply stop.",
+        "epilogue": "The server is still running.\nNobody remembers why.\nNobody turned it off.",
+        "bsod_lines": [
+            "STOP: OWNER_NOT_FOUND (0x00000404)",
+            "0xDEAD  0x4932DAYS",
+            "fatal: session has no owner",
+        ],
+        "climax_style": "haunted",
     }
 
 
