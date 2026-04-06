@@ -131,6 +131,33 @@ def _contents_put(pat: str, repo: str, state: dict, sha: str | None) -> None:
         with urllib.request.urlopen(req, timeout=30) as r:
             r.read()
     except urllib.error.HTTPError as e:
+        if e.code == 409:
+            # Concurrent write conflict: another run updated the file between our GET and PUT.
+            # Re-fetch the current SHA and retry once with the updated blob SHA.
+            print("[REMNANT] PUT 409 conflict — re-fetching state for retry")
+            _, fresh_sha = _contents_get(pat, repo)
+            if fresh_sha:
+                body["sha"] = fresh_sha
+                data = json.dumps(body).encode()
+                req2 = urllib.request.Request(
+                    url, data=data, method="PUT",
+                    headers={
+                        "Authorization":        f"token {pat}",
+                        "Accept":               "application/vnd.github+json",
+                        "X-GitHub-Api-Version": "2022-11-28",
+                        "Content-Type":         "application/json",
+                    },
+                )
+                try:
+                    with urllib.request.urlopen(req2, timeout=30) as r2:
+                        r2.read()
+                    print("[REMNANT] PUT retry succeeded")
+                    return
+                except urllib.error.HTTPError as e2:
+                    raise RuntimeError(
+                        f"REMNANT state PUT retry → HTTP {e2.code}: {e2.read().decode()}"
+                    ) from e2
+            raise RuntimeError("REMNANT state PUT 409 and re-fetch returned no SHA") from e
         raise RuntimeError(
             f"REMNANT state PUT → HTTP {e.code}: {e.read().decode()}"
         ) from e

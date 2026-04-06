@@ -6,7 +6,7 @@ LLM Shorts — Pipeline
 3. Emails you the review link
 """
 
-import os, sys, json, random, smtplib, ssl, hmac, hashlib, subprocess, tempfile, urllib.request, urllib.error, urllib.parse
+import os, sys, json, random, smtplib, ssl, hmac, hashlib, html, subprocess, tempfile, urllib.request, urllib.error, urllib.parse
 from email.mime.multipart import MIMEMultipart
 from email.mime.text      import MIMEText
 from datetime             import datetime, timezone
@@ -19,14 +19,17 @@ import remnant as rem
 
 
 def sign(run_id: str) -> str:
-    secret = os.environ.get("PIPELINE_SECRET", "change-me")
+    secret = os.environ.get("PIPELINE_SECRET", "")
+    if not secret or secret == "change-me":
+        print("❌ PIPELINE_SECRET is not set or is the default 'change-me'. Set it in GitHub secrets.")
+        sys.exit(1)
     return hmac.new(secret.encode(), run_id.encode(), hashlib.sha256).hexdigest()[:24]
 
 
 def build_review_page(kit: dict, run_id: str, sig: str, video_url: str) -> str:
     repo   = os.environ["GH_REPO"]
-    title  = kit["title"]
-    topic  = kit["topic"]
+    title  = html.escape(kit["title"])
+    topic  = html.escape(kit["topic"])
     slot   = kit["slot"]
     api    = f"https://api.github.com/repos/{repo}/actions/workflows"
 

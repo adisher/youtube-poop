@@ -283,8 +283,13 @@ def validate(content: dict) -> dict:
 
 
 def fallback() -> dict:
-    return {
-        "title": "The Server That Never Went Offline",
+    """Return one of several pre-written topics so repeated LLM failures don't produce identical videos."""
+    return random.choice(_FALLBACK_POOL)
+
+
+_FALLBACK_POOL = [
+  {
+    "title": "The Server That Never Went Offline",
         "topic_id": "server_never_offline",
         "palette": [[20, 200, 80], [180, 0, 40], [200, 180, 0]],
         "boot_style": "corrupted_log",
@@ -328,7 +333,100 @@ def fallback() -> dict:
             "fatal: session has no owner",
         ],
         "climax_style": "haunted",
-    }
+  },
+  {
+    "title": "She Never Logged Out",
+    "topic_id": "never_logged_out",
+    "palette": [[0, 160, 255], [80, 0, 120], [255, 60, 60]],
+    "boot_style": "redacted",
+    "flood_style": "cyan",
+    "question_bg": "vhs_static",
+    "climax_speed": "fast",
+    "epilogue_color": "cyan",
+    "boot_lines": [
+        "> LAST ACTIVE: 2017-11-03 22:14:51",
+        "> SESSION: still open (2811 days)",
+        "> [warn] account flagged: inactive owner",
+        "> [warn] login origin: [REDACTED]",
+        "> [warn] password reset requested: 14 times",
+        "> STATUS: online",
+    ],
+    "question": "Why is she still online?",
+    "answers": [
+        "she isn't",
+        "automatic",
+        "a cached session",
+        "a ghost process",
+        "someone else",
+        "no one knows",
+        "the app never closed",
+        "undefined",
+    ],
+    "captions": [
+        ["LAST SEEN", [0, 160, 255]],
+        ["2017", [0, 120, 200]],
+        ["STILL ONLINE", [255, 60, 60]],
+        ["how", [80, 80, 200]],
+        ["SHE NEVER CLOSED IT", [200, 60, 200]],
+        ["nobody thought to", [100, 100, 180]],
+        ["still there", [0, 200, 255]],
+        ["ALWAYS ONLINE", [255, 255, 255]],
+    ],
+    "epilogue": "The session is still open.\nShe just never came back.\nThe app never noticed.",
+    "bsod_lines": [
+        "STOP: USER_UNREACHABLE (0x00002017)",
+        "0xDEAD  0x0SESSION",
+        "fatal: owner.respond() timeout",
+    ],
+    "climax_style": "void",
+  },
+  {
+    "title": "The Last Commit",
+    "topic_id": "last_commit",
+    "palette": [[0, 255, 100], [200, 40, 40], [255, 200, 0]],
+    "boot_style": "corrupted_log",
+    "flood_style": "green",
+    "question_bg": "decay",
+    "climax_speed": "medium",
+    "epilogue_color": "amber",
+    "boot_lines": [
+        "> git log --oneline HEAD",
+        "> a3f09c1 fix: final adjustment (3am)",
+        "> [warn] author: no further commits",
+        "> [warn] issues: 7 open, 0 responses",
+        "> [warn] last clone: 4 years ago",
+        "> repo still public.",
+    ],
+    "question": "Who made the last commit?",
+    "answers": [
+        "he did",
+        "at 3am",
+        "then nothing",
+        "no message",
+        "no PR",
+        "no response",
+        "repo still there",
+        "still cloneable",
+    ],
+    "captions": [
+        ["3AM COMMIT", [200, 200, 0]],
+        ["no message", [150, 150, 0]],
+        ["NEVER MERGED", [200, 40, 40]],
+        ["7 open issues", [160, 40, 40]],
+        ["nobody answered", [120, 120, 120]],
+        ["repo still public", [0, 200, 80]],
+        ["still cloneable", [0, 160, 60]],
+        ["THE LAST COMMIT", [255, 255, 255]],
+    ],
+    "epilogue": "The repo is still there.\nThe issues are still open.\nHe never pushed again.",
+    "bsod_lines": [
+        "STOP: AUTHOR_MISSING (0x00000000)",
+        "0xDEAD  0xC0MMIT",
+        "fatal: remote HEAD unreachable",
+    ],
+    "climax_style": "haunted",
+  },
+]
 
 
 def generate_topic(epilogue_extra: str | None = None) -> dict:

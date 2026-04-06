@@ -56,4 +56,4 @@ jobs:
         run: |
           TOPIC_ARG=""
           [ -n "${{ github.event.inputs.topic }}" ] && TOPIC_ARG="--topic ${{ github.event.inputs.topic }}"
-          python3 scripts/pipeline.py --slot ${{ steps.slot.outputs.slot }} $TOPIC_ARG
+          python3 scripts/pipeline.py --slot ${{ steps.slot.outputs.slot }} "$TOPIC_ARG"

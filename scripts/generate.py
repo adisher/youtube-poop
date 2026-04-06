@@ -11,7 +11,7 @@ Every run: Groq invents a fresh topic + content + visual style choices.
 """
 
 import os, sys, math, random, wave, subprocess, json, argparse, colorsys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from content_gen import generate_topic
@@ -873,13 +873,15 @@ def generate(topic_id, slot, out_dir, *,
 
     shutil.rmtree(frames_dir)
 
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Schedule for tomorrow so the timestamp is never in the past by the time the
+    # user approves and publish.py runs (which can be 30-120 min after generation).
+    tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
     kit = {
         "title": topic["title"],
         "description": HASHTAGS,
         "topic": topic.get("topic_id", "generated"),
         "slot": slot,
-        "scheduled_time_utc": f"{date_str}T{SLOT_HOURS.get(slot, SLOT_HOURS['morning']):02d}:{random.randint(0, 54):02d}:00Z",
+        "scheduled_time_utc": f"{tomorrow}T{SLOT_HOURS.get(slot, SLOT_HOURS['morning']):02d}:{random.randint(0, 54):02d}:00Z",
         "video": video,
     }
     kit_path = os.path.join(out_dir, "kit.json")
