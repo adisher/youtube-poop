@@ -1,12 +1,12 @@
 {
-  "total_runs": 497,
-  "remnant_runs": 92,
-  "next_remnant_at": 498,
-  "current_stage": 4,
+  "total_runs": 498,
+  "remnant_runs": 93,
+  "next_remnant_at": 503,
+  "current_stage": 5,
   "current_cycle": 19,
-  "cycle_remnant_count": 3,
+  "cycle_remnant_count": 4,
   "in_dormant": false,
   "dormant_runs": 0,
   "last_ambient_index": 3,
-  "next_increment_is_4": false
+  "next_increment_is_4": true
 }
