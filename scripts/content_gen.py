@@ -209,7 +209,10 @@ def call_llm(prompt: str, model: str) -> dict:
         {
             "model": model,
             "temperature": 1.0,
-            "max_tokens": 1400,
+            # Most free models now "think" before answering; leave room for
+            # the reasoning plus the ~1k-token JSON, and keep reasoning short.
+            "max_tokens": 8000,
+            "reasoning": {"effort": "low", "exclude": True},
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -227,16 +230,17 @@ def call_llm(prompt: str, model: str) -> dict:
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=120) as r:
             resp = json.loads(r.read())
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"LLM HTTP {e.code} {e.reason}: {body}") from e
 
-    msg = resp["choices"][0]["message"]
-    raw = (msg.get("content") or msg.get("reasoning") or "").strip()
+    choice = resp["choices"][0]
+    msg = choice["message"]
+    raw = (msg.get("content") or "").strip()
     if not raw:
-        raise RuntimeError("Model returned empty response")
+        raise RuntimeError(f"Model returned no answer (finish_reason={choice.get('finish_reason')})")
     # Strip <think>...</think> reasoning blocks (some models include them inline in content)
     raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
     # Keep only the JSON object — drops markdown fences and any prose around it
