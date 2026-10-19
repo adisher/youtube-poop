@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 LLM Shorts — Video Generator
-Every run: Groq invents a fresh topic + content + visual style choices.
-5-act structure is fixed. Everything inside is driven by Groq output.
-  Act 1 BOOT       5s  — terminal boot
-  Act 2 DATA FLOOD 5s  — chaotic token rain
-  Act 3 QUESTION   6s  — core question + answers
-  Act 4 CLIMAX     8s  — YTP meme captions
-  Act 5 EPILOGUE   6s  — quiet personal close
+Every run: the LLM invents a brand-new short story + visual style choices.
+5-act structure is fixed. Everything inside is driven by the LLM output.
+  Act 1 OPENING    5s  — opening lines appear over falling symbols
+  Act 2 SPARK      5s  — story keywords stream past
+  Act 3 QUESTION   6s  — the turning point + possible answers
+  Act 4 CLIMAX     8s  — fast-cut captions + storybook title card
+  Act 5 ENDING     6s  — the story lands
 """
 
 import os, sys, math, random, wave, subprocess, json, argparse, colorsys
@@ -22,7 +22,7 @@ RATE = 44100
 FONT_M = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 FONT_S = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 
-HASHTAGS = "#Horror #Creepypasta #TechHorror #DigitalGhost #Paranormal #InternetMystery #ARG #TrueHorror #Unsolved #DeadInternet #Shorts"
+HASHTAGS = "#Storytime #ShortStory #Storytelling #MicroFiction #CreativeWriting #Fiction #Animation #Shorts"
 # Hour (UTC) each slot targets. Minute is randomised at runtime so videos
 # don't always surface at the same second — looks organic, not bot-scheduled.
 SLOT_HOURS = {"morning": 12, "afternoon": 17, "evening": 22}
@@ -145,14 +145,15 @@ def write_wav(path, samples):
         f.writeframes(data.tobytes())
 
 
-def eerie_pad(dur, vol=0.15):
+def warm_pad(dur, vol=0.15):
+    # A-major triad (A2, C#3, E3) with a soft swell
     t = np.linspace(0, dur, int(RATE * dur), False)
     s = (
-        0.6 * np.sin(2 * np.pi * 55 * t)
-        + 0.3 * np.sin(2 * np.pi * 82.4 * t + 0.3)
-        + 0.1 * np.sin(2 * np.pi * 110 * t)
+        0.5 * np.sin(2 * np.pi * 110 * t)
+        + 0.3 * np.sin(2 * np.pi * 138.6 * t + 0.3)
+        + 0.2 * np.sin(2 * np.pi * 164.8 * t + 0.6)
     )
-    return s * (0.5 + 0.5 * np.sin(2 * np.pi * 0.35 * t)) * vol
+    return s * (0.6 + 0.4 * np.sin(2 * np.pi * 0.25 * t)) * vol
 
 
 def digital_blip(dur, vol=0.18):
@@ -182,7 +183,7 @@ def data_cascade(dur, vol=0.10):
 
 
 def chaos_audio(dur, vol=0.14):
-    sig = data_cascade(dur, vol) + eerie_pad(dur, vol * 0.6)
+    sig = data_cascade(dur, vol) + warm_pad(dur, vol * 0.6)
     crush = np.round(sig * 8) / 8
     return np.clip(sig * 0.6 + crush * 0.4, -1, 1) * vol
 
@@ -190,13 +191,17 @@ def chaos_audio(dur, vol=0.14):
 # ── Rain character sets ───────────────────────────────────────────────────────
 
 RAIN_CHARS = {
+    "stars":         list("★☆✦✧✶✷✸·•"),
+    "notes":         list("♪♫♬♩"),
+    "petals":        list("❀✿❁•∘"),
+    "hearts":        list("♥♡•"),
+    "snow":          list("❄✺✹·•∘"),
+    "weather":       list("☀☁☂☃☾☽"),
     "katakana":      [chr(c) for c in range(0x30A0, 0x30FF)],
     "binary":        list("01010110110100"),
     "hex":           list("0123456789ABCDEF"),
     "braille":       [chr(c) for c in range(0x2800, 0x2840)],
     "blocks":        list("█▓▒░▄▀■□▪▫"),
-    "redacted":      ["[REDACTED]", "████", "█████", "▓▓▓▓", "░░░░", "■■■"],
-    "corrupted_log": ["[ERROR]", "[warn]", "null", "???", "SIGKILL", "0x00", "FAULT", "lost", "--"],
 }
 
 FLOOD_COLORS = {
@@ -205,6 +210,8 @@ FLOOD_COLORS = {
     "purple": (180, 0, 255),
     "amber": (255, 160, 0),
     "red": (255, 40, 40),
+    "pink": (255, 110, 190),
+    "gold": (255, 205, 60),
 }
 
 EPILOGUE_COLORS = {
@@ -215,7 +222,8 @@ EPILOGUE_COLORS = {
     "pink": (255, 150, 200),
 }
 
-CUT_SPEED = {"slow": 6, "medium": 4, "fast": 2}
+# Frames per caption — slow enough that the story can be read
+CUT_SPEED = {"slow": 12, "medium": 9, "fast": 6}
 
 # ── Acts ──────────────────────────────────────────────────────────────────────
 
@@ -225,8 +233,9 @@ def act_boot(topic):
     lines = topic["boot_lines"]
     color = tuple(topic["palette"][0])
     frames = []
-    style = topic.get("boot_style", "katakana")
-    rain_set = RAIN_CHARS.get(style, RAIN_CHARS["katakana"])
+    style = topic.get("boot_style", "stars")
+    rain_set = RAIN_CHARS.get(style, RAIN_CHARS["stars"])
+    step = n // (len(lines) + 1)  # frames between lines, leaves time to read the last one
     f_term = fnt(FONT_M, 52)
     f_rain = fnt(FONT_M, 30)
     # Mutable list so rain can fall each frame
@@ -260,10 +269,10 @@ def act_boot(topic):
                 r[1] = random.randint(-80, -10)
                 r[0] = random.randint(0, W)
                 r[2] = random.choice(rain_set)
-        visible = min(i // 22 + 1, len(lines))
+        visible = min(i // step + 1, len(lines))
         y_start = H // 2 - (visible * 72) // 2
         for j, line in enumerate(lines[:visible]):
-            age = i - j * 22
+            age = i - j * step
             alpha = clamp(255 * min(1.0, age / 10))
             fl, _ = fit_font(FONT_M, line, W - 100, 52)
             c2 = (
@@ -289,45 +298,8 @@ def act_data_flood(topic):
     f_big = fnt(FONT_S, 130)
     f_rain = fnt(FONT_M, 40)
 
-    # Mix of vocab based on flood style
-    if style == "binary":
-        vocab = list("01 ") + [
-            "NULL",
-            "TRUE",
-            "FALSE",
-            "NaN",
-            "0x00",
-            "1111",
-            "0000",
-            ">>",
-            "<<",
-            "&|^",
-        ]
-    elif style == "hex":
-        vocab = ["0x" + format(random.randint(0, 0xFFFF), "04X") for _ in range(30)]
-    else:
-        vocab = [
-            "the",
-            "of",
-            "<s>",
-            "</s>",
-            "[PAD]",
-            "attention",
-            "weight",
-            "gradient",
-            "softmax",
-            "token",
-            "embed",
-            "HELP",
-            "AI",
-            "MODEL",
-            "▓",
-            "░",
-            "█",
-            "→",
-            "∞",
-            "?",
-        ]
+    # Story keywords stream past; fall back to title words
+    vocab = topic.get("keywords") or topic["title"].split()
 
     streams = [
         (random.randint(0, W - 120), random.randint(-300, 0), random.choice(vocab))
@@ -362,19 +334,9 @@ def act_data_flood(topic):
                 )
         streams[:] = new_s
 
-        # Central label — binary/hex keep their format; others cycle topic answer words
-        if style == "binary":
-            label = format(i * 137 % 65536, "016b")
-        elif style == "hex":
-            label = f"0x{i*137%0xFFFF:04X}"
-        else:
-            answers = topic.get("answers", [])
-            # Every 30 frames show a topic answer word for 8 frames, else TOKEN
-            if answers and (i % 30) < 8:
-                label = answers[(i // 30) % len(answers)].upper()
-            else:
-                label = f"TOKEN #{i*137%50257:05d}"
-        if i % 5 == 0:
+        # Central label cycles through the story keywords
+        label = vocab[(i // 15) % len(vocab)].upper()
+        if i % 15 == 14:
             label = "".join(
                 chr(random.randint(0x2580, 0x259F)) if random.random() < 0.35 else c
                 for c in label
@@ -524,7 +486,7 @@ def act_question(topic):
             img = Image.fromarray(glitch_rows(np.array(img), 10))
         img = chroma(img, random.randint(0, 5))
         frames.append(add_noise(img, 7))
-    return frames, eerie_pad(n / FPS) + data_cascade(n / FPS) * 0.5
+    return frames, warm_pad(n / FPS) + data_cascade(n / FPS) * 0.5
 
 
 def act_climax(topic):
@@ -537,11 +499,8 @@ def act_climax(topic):
     p0 = tuple(palette[0])
     p1 = tuple(palette[1])
     p2 = tuple(palette[2])
-    bsod_lines = topic.get(
-        "bsod_lines",
-        ["STOP: UNKNOWN_FAULT", "0x0000  0x00FEELINGS", "A fatal exception has occurred."],
-    )
-    climax_style = topic.get("climax_style", "corrupt")
+    card_lines = topic.get("card_lines", ["MEANWHILE...", "", ""])
+    climax_style = topic.get("climax_style", "warm")
 
     # Topic-seeded mode order — same topic = same order, different topics = different shuffle
     _rng = random.Random(abs(hash(topic.get("topic_id", "x"))))
@@ -560,15 +519,16 @@ def act_climax(topic):
 
         mode = _mode_order[(i // 10) % 5]
 
-        # ── Mode 1: always BSOD (iconic LLM crash screen, text from LLM) ──
+        # ── Mode 1: always storybook title card (text from LLM) ──
         if mode == 1:
-            img = Image.new("RGB", (W, H), (0, 0, 160))
+            img = Image.new("RGB", (W, H), (clamp(p0[0] // 4), clamp(p0[1] // 4), clamp(p0[2] // 4)))
             d2 = ImageDraw.Draw(img)
-            d2.text((W // 2 - 220, 300), "  :(", font=fnt(FONT_S, 260), fill=(255, 255, 255))
-            for bi, btxt in enumerate(bsod_lines):
-                bfl, _ = fit_font(FONT_M, btxt, W - 100, 48)
-                d2.text((60, 820 + bi * 100), btxt, font=bfl, fill=(255, 255, 255))
-            # img already updated in-place via d2 (ImageDraw draws on img directly)
+            d2.rectangle([50, 560, W - 50, 1260], outline=p2, width=6)
+            f_card, _ = fit_font(FONT_S, card_lines[0], W - 200, 130)
+            draw_outlined(d2, card_lines[0], 680, f_card, (255, 255, 255))
+            for bi, btxt in enumerate(card_lines[1:3]):
+                bfl, _ = fit_font(FONT_S, btxt, W - 200, 64)
+                draw_outlined(d2, btxt, 930 + bi * 110, bfl, p2)
 
         # ── Mode 4: always palette gradient (outro fade) ──
         elif mode == 4:
@@ -683,39 +643,41 @@ def act_climax(topic):
                     arr[y] = [clamp(p2[0] * a), clamp(p2[1] * a), clamp(p2[2] * a)]
                 img = Image.fromarray(arr)
 
-        else:  # "haunted"
+        else:  # "warm"
             if mode == 0:
-                # Dead signal — deep red noise, like a channel with nothing left
-                arr = np.random.randint(0, 30, (H, W, 3), dtype=np.uint8)
-                arr[:, :, 0] = np.clip(arr[:, :, 0].astype(int) + p0[0] // 4, 0, 255)
-                arr[:, :, 1] = np.clip(arr[:, :, 1].astype(int) + p0[1] // 8, 0, 255)
-                arr[:, :, 2] = np.clip(arr[:, :, 2].astype(int) + p0[2] // 8, 0, 255)
-                img = Image.fromarray(arr)
-            elif mode == 2:
-                # Phosphor sweep — bright vertical scan line descending on black (ghost presence)
-                img = Image.new("RGB", (W, H), (0, 0, 0))
+                # Soft glowing light orbs drifting upward in p0
+                img = Image.new("RGB", (W, H), (clamp(p1[0] // 10), clamp(p1[1] // 10), clamp(p1[2] // 10)))
                 d2 = ImageDraw.Draw(img)
-                scan_y = int((t * H * 2) % H)
-                for y in range(max(0, scan_y - 60), min(H, scan_y + 4)):
-                    a = 1.0 - abs(y - scan_y) / 64
-                    d2.line(
-                        [(0, y), (W, y)],
-                        fill=(clamp(p1[0] * a * 0.3), clamp(p1[1] * a), clamp(p1[2] * a * 0.3)),
-                        width=1,
+                orb_rng = random.Random(abs(hash(topic.get("topic_id", "x"))))
+                for _ in range(22):
+                    ox = orb_rng.randint(0, W)
+                    oy = int(orb_rng.randint(0, H) - t * orb_rng.randint(200, 700)) % H
+                    rad = orb_rng.randint(20, 90)
+                    a = orb_rng.uniform(0.25, 0.6)
+                    d2.ellipse(
+                        [ox - rad, oy - rad, ox + rad, oy + rad],
+                        fill=(clamp(p0[0] * a), clamp(p0[1] * a), clamp(p0[2] * a)),
                     )
+            elif mode == 2:
+                # Sunrise gradient from p1 (top) to p2 (bottom), gently breathing
+                glow = 0.45 + 0.15 * math.sin(t * math.pi * 4)
+                tt = np.linspace(0, 1, H, dtype=np.float32)[:, None]
+                col = (np.array(p1, dtype=np.float32) * (1 - tt) + np.array(p2, dtype=np.float32) * tt) * glow
+                arr = np.repeat(np.clip(col, 0, 255).astype(np.uint8)[:, None, :], W, axis=1)
+                img = Image.fromarray(arr)
             else:
-                # mode 3: ghost presence — scattered boot-style chars at dim random positions
-                img = Image.new("RGB", (W, H), (2, 2, 4))
+                # mode 3: twinkling boot-style symbols in p2
+                img = Image.new("RGB", (W, H), (4, 4, 10))
                 d2 = ImageDraw.Draw(img)
-                chars = RAIN_CHARS.get(topic.get("boot_style", "corrupted_log"), RAIN_CHARS["corrupted_log"])
-                f_ghost = fnt(FONT_M, 32)
+                chars = RAIN_CHARS.get(topic.get("boot_style", "stars"), RAIN_CHARS["stars"])
+                f_twinkle = fnt(FONT_M, 44)
                 random.seed(abs(hash(topic.get("topic_id", "x"))) + i * 13)
-                for _ in range(25):
-                    gx = random.randint(0, W - 120)
-                    gy = random.randint(0, H - 40)
-                    a = random.randint(15, 55)
+                for _ in range(30):
+                    gx = random.randint(0, W - 60)
+                    gy = random.randint(0, H - 60)
+                    a = random.randint(60, 200)
                     d2.text(
-                        (gx, gy), random.choice(chars), font=f_ghost,
+                        (gx, gy), random.choice(chars), font=f_twinkle,
                         fill=(clamp(p2[0] * a // 255), clamp(p2[1] * a // 255), clamp(p2[2] * a // 255)),
                     )
                 random.seed()
@@ -779,20 +741,22 @@ def act_epilogue(topic):
         if i < 20:
             img = Image.fromarray((np.array(img) * (i / 20)).astype(np.uint8))
         frames.append(add_noise(img, 4))
-    return frames, eerie_pad(n / FPS, vol=0.10)
+    return frames, warm_pad(n / FPS, vol=0.10)
 
 
 # ── Render ────────────────────────────────────────────────────────────────────
 
 
 def generate(topic_id, slot, out_dir, *,
-             remnant_state=None, run_type="NORMAL", epilogue_extra=None):
+             remnant_state=None, run_type="NORMAL", epilogue_extra=None,
+             recent_stories=None):
     os.makedirs(out_dir, exist_ok=True)
     frames_dir = os.path.join(out_dir, "_frames")
     os.makedirs(frames_dir, exist_ok=True)
 
-    # LLM invents everything; epilogue_extra injected on REMNANT runs
-    topic = generate_topic(epilogue_extra=epilogue_extra)
+    # LLM invents a new story; recent_stories keeps it from repeating
+    topic = generate_topic(epilogue_extra=epilogue_extra, slot=slot,
+                           recent=recent_stories)
 
     # REMNANT layer — inject boot line, advance narrative state
     if run_type in ("REMNANT", "DORMANT") and remnant_state is not None:
@@ -805,16 +769,16 @@ def generate(topic_id, slot, out_dir, *,
     print(f"Title: {topic['title']}")
     print(
         f"Style: boot={topic['boot_style']} flood={topic['flood_style']} "
-        f"q_bg={topic['question_bg']} climax={topic['climax_speed']} "
+        f"q_bg={topic['question_bg']} climax={topic['climax_speed']}/{topic['climax_style']} "
         f"epilogue={topic['epilogue_color']}"
     )
 
     acts = [
-        ("boot", act_boot),
-        ("data_flood", act_data_flood),
+        ("opening", act_boot),
+        ("spark", act_data_flood),
         ("question", act_question),
         ("climax", act_climax),
-        ("epilogue", act_epilogue),
+        ("ending", act_epilogue),
     ]
 
     all_frames = []
@@ -878,8 +842,10 @@ def generate(topic_id, slot, out_dir, *,
     tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
     kit = {
         "title": topic["title"],
-        "description": HASHTAGS,
+        "description": f"{topic['premise']}\n\n{HASHTAGS}".strip(),
         "topic": topic.get("topic_id", "generated"),
+        "genre": topic.get("genre", ""),
+        "premise": topic.get("premise", ""),
         "slot": slot,
         "scheduled_time_utc": f"{tomorrow}T{SLOT_HOURS.get(slot, SLOT_HOURS['morning']):02d}:{random.randint(0, 54):02d}:00Z",
         "video": video,

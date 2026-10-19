@@ -16,6 +16,7 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 import generate as gen
 import remnant as rem
+import story_history as hist
 
 
 def sign(run_id: str) -> str:
@@ -31,6 +32,7 @@ def build_review_page(kit: dict, run_id: str, sig: str, video_url: str) -> str:
     title  = html.escape(kit["title"])
     topic  = html.escape(kit["topic"])
     slot   = kit["slot"]
+    desc   = html.escape(kit.get("description", ""), quote=True)
     api    = f"https://api.github.com/repos/{repo}/actions/workflows"
 
     return f"""<!DOCTYPE html>
@@ -38,6 +40,7 @@ def build_review_page(kit: dict, run_id: str, sig: str, video_url: str) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="yt-description" content="{desc}">
 <title>{title}</title>
 <style>
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -343,18 +346,27 @@ def run(slot: str, topic_id: str | None = None):
     owner     = repo.split("/")[0]
     repo_name = repo.split("/")[1]
 
-    # 0. Load REMNANT state (persisted across runs as a GitHub repo variable)
-    remnant_state, state_existed = rem.load_state(pat, repo)
-    remnant_state["total_runs"] += 1
-    run_type      = rem.determine_run_type(remnant_state)
-    epilogue_extra = rem.get_epilogue_extra(run_type)
-    print(f"[REMNANT] Run {remnant_state['total_runs']} — type: {run_type}")
+    # 0a. Load story history so today's story never repeats an earlier one
+    history, history_sha = hist.load(pat, repo)
+    print(f"[HISTORY] {len(history)} earlier stories loaded")
 
-    # 1. Generate video (REMNANT injects boot line + epilogue inside generate())
+    # 0b. REMNANT is the old horror ARG layer — off unless REMNANT_ENABLED=1
+    remnant_on = os.environ.get("REMNANT_ENABLED") == "1"
+    remnant_state, state_existed = None, False
+    run_type, epilogue_extra = "NORMAL", None
+    if remnant_on:
+        remnant_state, state_existed = rem.load_state(pat, repo)
+        remnant_state["total_runs"] += 1
+        run_type      = rem.determine_run_type(remnant_state)
+        epilogue_extra = rem.get_epilogue_extra(run_type)
+        print(f"[REMNANT] Run {remnant_state['total_runs']} — type: {run_type}")
+
+    # 1. Generate video
     kit = gen.generate(None, slot, out_dir,
                        remnant_state=remnant_state,
                        run_type=run_type,
-                       epilogue_extra=epilogue_extra)
+                       epilogue_extra=epilogue_extra,
+                       recent_stories=history)
 
     # 2. Upload video to a GitHub Release asset (avoids 100 MB git file limit)
     print("\n🚀 Uploading video to GitHub Release...")
@@ -379,8 +391,10 @@ def run(slot: str, topic_id: str | None = None):
     print("\n📧 Sending email...")
     send_email(kit["title"], review_url)
 
-    # 6. Persist REMNANT state (only after full success — failed runs don't advance)
-    rem.save_state(remnant_state, pat, repo, state_existed)
+    # 6. Persist state (only after full success — failed runs don't count)
+    hist.save(hist.add(history, kit), history_sha, pat, repo)
+    if remnant_on:
+        rem.save_state(remnant_state, pat, repo, state_existed)
 
     print(f"\n✅ Done. Check your inbox.")
 

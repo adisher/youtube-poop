@@ -50,6 +50,12 @@ def get_kit_from_gh_pages(run_id: str) -> dict | None:
         if m:
             kit[field] = m.group(1).strip()
 
+    import html as html_lib
+    kit = {k: html_lib.unescape(v) for k, v in kit.items()}
+    dm = re.search(r'<meta name="yt-description" content="([^"]*)">', content)
+    if dm:
+        kit["description"] = html_lib.unescape(dm.group(1))
+
     # Extract release asset video URL
     vm = re.search(r'<source src="([^"]+)" type="video/mp4">', content)
     if not vm:
@@ -120,7 +126,7 @@ with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
 print(f"  ✓ Video downloaded ({os.path.getsize(tmp_path)//1024}KB)")
 
 # Upload to YouTube
-description = "#AIShorts #LLM #ArtificialIntelligence #MachineLearning #AILife #ChatGPT #FutureOfAI #DeepLearning #NeuralNetwork #AIExperience #AIConsciousness #LanguageModel"
+description = kit.get("description") or "#Storytime #ShortStory #Storytelling #MicroFiction #CreativeWriting #Fiction #Animation #Shorts"
 
 missing = [v for v in ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN")
            if not os.environ.get(v)]
