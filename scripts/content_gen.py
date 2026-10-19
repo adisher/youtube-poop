@@ -18,14 +18,18 @@ import os, json, random, time, re, urllib.request, urllib.error
 from datetime import datetime, timezone
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODELS_URL = "https://openrouter.ai/api/v1/models"
 
-# Models tried in order — first available wins. All are free-tier on OpenRouter.
-# Using multiple providers so a single upstream outage doesn't block every run.
+# Preferred free models, tried first when OpenRouter still lists them as free.
+# Free models get delisted or turn paid often, so the live free list from
+# MODELS_URL is appended at runtime (see candidate_models).
 MODELS = [
-    "arcee-ai/trinity-large-preview:free",      # 400B instruction model — most reliable lately
-    "stepfun/step-3.5-flash:free",              # 196B MoE — fast; inline <think> blocks stripped by re.sub
-    "nvidia/nemotron-3-super-120b-a12b:free",  # 120B hybrid MoE — last resort
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "arcee-ai/trinity-large-preview:free",
+    "stepfun/step-3.5-flash:free",
 ]
+FREE_ROUTER = "openrouter/free"   # OpenRouter's own router across free models
+MAX_ATTEMPTS = 6
 
 # Rotates by date + slot. 16 genres and 3 slots share no common factor, so
 # consecutive runs walk through every genre before any repeats.
@@ -223,7 +227,7 @@ def call_llm(prompt: str, model: str) -> dict:
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=60) as r:
             resp = json.loads(r.read())
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
@@ -235,11 +239,40 @@ def call_llm(prompt: str, model: str) -> dict:
         raise RuntimeError("Model returned empty response")
     # Strip <think>...</think> reasoning blocks (some models include them inline in content)
     raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
-    # Strip markdown fences if model adds them
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-    return json.loads(raw)
+    # Keep only the JSON object — drops markdown fences and any prose around it
+    start, end = raw.find("{"), raw.rfind("}")
+    if start == -1 or end <= start:
+        raise RuntimeError(f"No JSON object in response: {raw[:120]!r}")
+    return json.loads(raw[start:end + 1])
+
+
+def candidate_models() -> list:
+    """Preferred models that are still free, then the newest other free models."""
+    try:
+        with urllib.request.urlopen(MODELS_URL, timeout=20) as r:
+            data = json.loads(r.read())["data"]
+    except Exception as e:
+        print(f"  Could not list OpenRouter models ({e}) — using built-in list")
+        return MODELS + [FREE_ROUTER]
+
+    def is_free_text(m):
+        pricing = m.get("pricing") or {}
+        modality = (m.get("architecture") or {}).get("modality", "text->text")
+        return (
+            m.get("id", "").endswith(":free")
+            and str(pricing.get("prompt", "0")) in ("0", "0.0")
+            and str(pricing.get("completion", "0")) in ("0", "0.0")
+            and modality.endswith("->text")
+            and (m.get("context_length") or 0) >= 8000
+        )
+
+    free = sorted((m for m in data if is_free_text(m)),
+                  key=lambda m: m.get("created", 0), reverse=True)
+    free_ids = [m["id"] for m in free]
+    ordered = [m for m in MODELS if m in free_ids] + [m for m in free_ids if m not in MODELS]
+    picked = ordered[:MAX_ATTEMPTS - 1] + [FREE_ROUTER]
+    print(f"  {len(free_ids)} free models listed — trying: {', '.join(picked)}")
+    return picked
 
 
 def _pick(content: dict, key: str, allowed: tuple, default: str) -> str:
@@ -444,7 +477,8 @@ def generate_topic(epilogue_extra: str | None = None, *, slot: str = "morning",
     genre = genre_for(slot)
     print(f"  Genre today ({slot}): {genre}")
     sparks = make_sparks()
-    for i, model in enumerate(MODELS):
+    models = candidate_models()
+    for i, model in enumerate(models):
         try:
             print(f"  Generating story (model: {model})...")
             content = validate(call_llm(make_prompt(genre, sparks, recent, epilogue_extra), model))
@@ -457,7 +491,7 @@ def generate_topic(epilogue_extra: str | None = None, *, slot: str = "morning",
         except Exception as e:
             print(f"  {model} failed: {e}")
             sparks = make_sparks()  # reroll sparks so the next attempt differs
-            if i < len(MODELS) - 1:
+            if i < len(models) - 1:
                 print("  Waiting 5s before trying next model...")
                 time.sleep(5)
     print("  All models failed. Using procedural fallback story.")
