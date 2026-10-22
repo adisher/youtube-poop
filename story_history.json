@@ -75,5 +75,12 @@
     "genre": "absurd comedy",
     "title": "The Map That Conducted a City",
     "premise": "A street violinist follows a child's map into a rooftop garden and accidentally conducts a chaotic citywide orchestra."
+  },
+  {
+    "date": "2026-10-22",
+    "slot": "evening",
+    "genre": "folktale retold in a modern city",
+    "title": "The Tiny Knight Who Found No Door",
+    "premise": "A tiny rooftop knight finds a doorless key and learns the stranger who needs it is his family."
   }
 ]
