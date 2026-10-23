@@ -96,5 +96,12 @@
     "genre": "folktale retold in a modern city",
     "title": "The Cat Who Drew The Mountain",
     "premise": "A stray cat with a map follows a compass that points to need into a mountain observatory and learns the city is the real mountain."
+  },
+  {
+    "date": "2026-10-23",
+    "slot": "evening",
+    "genre": "space exploration wonder",
+    "title": "The Robot That Watered Dreams",
+    "premise": "A robot gardener with a dream camera on a drifting comet greenhouse photographs its sleeping seed, then listens, shares a dream, and grows a friend."
   }
 ]
