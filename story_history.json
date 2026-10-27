@@ -180,5 +180,12 @@
     "genre": "cozy mystery with a clever reveal",
     "title": "The Airplane That Delivered Tomorrow",
     "premise": "A paper airplane at a toy hospital delivers a future letter and discovers it was written by the nurse who folded it."
+  },
+  {
+    "date": "2026-10-27",
+    "slot": "evening",
+    "genre": "magical realism",
+    "title": "The Baker Who Baked Thunder",
+    "premise": "A nocturnal baker in a mountain observatory discovers that the lonely storm she meets is just waiting to befriend her."
   }
 ]
