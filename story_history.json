@@ -243,5 +243,12 @@
     "genre": "talking animal tale",
     "title": "The Tortoise and the Doorless Key",
     "premise": "A retired tortoise lighthouse keeper volunteers at a hospital for broken toys and discovers a key that opens no door, until she chooses to wind a broken heart instead."
+  },
+  {
+    "date": "2026-10-30",
+    "slot": "evening",
+    "genre": "bedtime-story myth about how something came to be",
+    "title": "The Last Bus Stop Sang",
+    "premise": "An inventor's forgotten lullaby engine at the last bus stop on Earth turns a key with no door into a song that carries memories home."
   }
 ]
