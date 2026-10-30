@@ -250,5 +250,12 @@
     "genre": "bedtime-story myth about how something came to be",
     "title": "The Last Bus Stop Sang",
     "premise": "An inventor's forgotten lullaby engine at the last bus stop on Earth turns a key with no door into a song that carries memories home."
+  },
+  {
+    "date": "2026-10-30",
+    "slot": "afternoon",
+    "genre": "unlikely friendship",
+    "title": "The Prototype Who Fixed A Song",
+    "premise": "A forgotten inventor's prototype repairs a broken music box in a toy hospital, only to learn the melody was a gift for a new friend."
   }
 ]
