@@ -257,5 +257,12 @@
     "genre": "unlikely friendship",
     "title": "The Prototype Who Fixed A Song",
     "premise": "A forgotten inventor's prototype repairs a broken music box in a toy hospital, only to learn the melody was a gift for a new friend."
+  },
+  {
+    "date": "2026-10-30",
+    "slot": "evening",
+    "genre": "bedtime-story myth about how something came to be",
+    "title": "The Unsealed Future Letter",
+    "premise": "A moon librarian discovers an unopened letter to her future self in a floating market and must choose between sealing it to preserve the market or opening it to reshape its destiny"
   }
 ]
