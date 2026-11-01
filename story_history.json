@@ -285,5 +285,12 @@
     "genre": "hopeful science fiction",
     "title": "The Plane That Wound A Memory",
     "premise": "A paper airplane at a floating sky market winds a broken music box and discovers the melody is a lost childhood memory."
+  },
+  {
+    "date": "2026-11-01",
+    "slot": "evening",
+    "genre": "epic adventure in miniature",
+    "title": "The Matchbox Island That Sailed",
+    "premise": "A tiny sailor chases a lost harbor song across her drifting matchbox island."
   }
 ]
