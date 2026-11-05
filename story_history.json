@@ -383,5 +383,12 @@
     "genre": "whimsical fantasy fable",
     "title": "The Snow That Delivered Tomorrow",
     "premise": "A lost delivery drone in a town that always snows on Tuesdays opens a letter addressed to its future self and learns to deliver itself."
+  },
+  {
+    "date": "2026-11-05",
+    "slot": "evening",
+    "genre": "whimsical fantasy fable",
+    "title": "The Laundromat Moon",
+    "premise": "A night janitor at a 2am laundromat discovers lost dreams wash in, and a moon-shaped dream just wants a friend to spin its cradle."
   }
 ]
