@@ -390,5 +390,12 @@
     "genre": "whimsical fantasy fable",
     "title": "The Laundromat Moon",
     "premise": "A night janitor at a 2am laundromat discovers lost dreams wash in, and a moon-shaped dream just wants a friend to spin its cradle."
+  },
+  {
+    "date": "2026-11-06",
+    "slot": "evening",
+    "genre": "absurd comedy",
+    "title": "The Cat Who Grew Stardust",
+    "premise": "A stray cat with a star map digs up a glowing seed and accidentally solves the junkyard's star problem with a sunflower."
   }
 ]
