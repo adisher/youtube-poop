@@ -411,5 +411,12 @@
     "genre": "absurd comedy",
     "title": "The Memory That Won The Bet",
     "premise": "A twin who lost a bet must wind a backwards clock on a turtle city and discovers the treasure is just a shared memory."
+  },
+  {
+    "date": "2026-11-07",
+    "slot": "evening",
+    "genre": "folktale retold in a modern city",
+    "title": "The Ticket She Kept For You",
+    "premise": "A mapmaker who never left home keeps a ticket for a train that left yesterday and learns her real quest is a gift for someone else."
   }
 ]
