@@ -453,5 +453,12 @@
     "genre": "space exploration wonder",
     "title": "The Grandma Who Rode The Moon",
     "premise": "A grandmother learning to skateboard at a 2 a.m. orbital laundromat discovers the missing ingredient for her star recipe is the love she shares with a stranger who is family."
+  },
+  {
+    "date": "2026-11-09",
+    "slot": "evening",
+    "genre": "inventor's breakthrough",
+    "title": "The Knight Who Rang Bread",
+    "premise": "A tiny knight at the edge of the universe builds absurd bells to ring a silent bell, then discovers the impossible fix was just bread."
   }
 ]
