@@ -481,5 +481,12 @@
     "genre": "heartwarming slice of life",
     "title": "The Drone Who Delivered Warmth",
     "premise": "A lost delivery drone on a nightly-moving island learns that the simplest delivery is a warm cup of tea shared with a stranger."
+  },
+  {
+    "date": "2026-11-10",
+    "slot": "evening",
+    "genre": "heartwarming slice of life",
+    "title": "The Violin That Rode The Tide",
+    "premise": "A street violinist on a nightly-moving island keeps a warm ticket from yesterday and learns to play the island home."
   }
 ]
