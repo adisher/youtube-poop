@@ -495,5 +495,12 @@
     "genre": "heartwarming slice of life",
     "title": "The Tuesday That Made Rain",
     "premise": "A bus driver in a town that only snowed on Tuesdays uses his rain-control umbrella to give a child a gentle rainy memory instead of snow."
+  },
+  {
+    "date": "2026-11-11",
+    "slot": "evening",
+    "genre": "cozy mystery with a clever reveal",
+    "title": "The Boy Who Collected Yesterday",
+    "premise": "A boy who collects lost socks follows a vanished lucky sock into a star-junkyard and discovers a yesterday train ticket that wished sideways."
   }
 ]
