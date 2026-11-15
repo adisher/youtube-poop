@@ -579,5 +579,12 @@
     "genre": "talking animal tale",
     "title": "The Fox Who Poured Two Cups",
     "premise": "A fox bookshop keeper in a glass desert hunts a recipe's missing ingredient and learns it was just a second cup for a stranger."
+  },
+  {
+    "date": "2026-11-15",
+    "slot": "evening",
+    "genre": "bedtime-story myth about how something came to be",
+    "title": "The Snowman Who Refused To Melt",
+    "premise": "In a hospital where broken toys heal, a snowman refuses to melt long enough to deliver a letter a little girl wrote to her future self \u2014 and learns his stubborn cold was always a gift for someone else."
   }
 ]
