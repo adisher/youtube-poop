@@ -600,5 +600,12 @@
     "genre": "bedtime-story myth about how something came to be",
     "title": "The Knight Who Made The First Puddle",
     "premise": "At Earth's last bus stop, the smallest knight swings a rain-controlling umbrella and wishes for the sky to weep, but his wish falls sideways into the very first puddle that ever held the stars."
+  },
+  {
+    "date": "2026-11-16",
+    "slot": "evening",
+    "genre": "hopeful science fiction",
+    "title": "The Bell That Sang A Memory",
+    "premise": "A three-apple-tall knight on a mountain observatory tries everything to ring the one bell no one can sound, and learns it waits for a memory."
   }
 ]
