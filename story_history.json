@@ -712,5 +712,12 @@
     "genre": "whimsical fantasy fable",
     "title": "The Ticket To Yesterday's Nap",
     "premise": "A tired superhero on vacation in a city built on giant turtles uses a ticket for yesterday's train to wish for rest, and the wish lands sideways, turning her cape into a cloud hammock that lets the whole city sleep safely."
+  },
+  {
+    "date": "2026-11-21",
+    "slot": "evening",
+    "genre": "whimsical fantasy fable",
+    "title": "The Superhero Who Got A Backwards Letter",
+    "premise": "A tired superhero on vacation at an underwater post office discovers a backwards clock is delivering an unsent letter from her future self, teaching her that rest is a heroic act."
   }
 ]
