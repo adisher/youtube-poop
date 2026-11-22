@@ -726,5 +726,12 @@
     "genre": "whimsical fantasy fable",
     "title": "The Clock That Made Turtles Sneeze",
     "premise": "A clock-repair girl in a city riding giant turtles tries to fix the great town clock with an uneraseable pencil, and the jam only clears when her scribbles tickle the turtles into a synchronized sneeze."
+  },
+  {
+    "date": "2026-11-22",
+    "slot": "evening",
+    "genre": "absurd comedy",
+    "title": "How A Paper Airplane Caught The Last Bus",
+    "premise": "A paper airplane waiting at Earth's last bus stop tries to trade a jar of bottled sunlight for a ticket to Mars, only to discover the bus has other plans\u2014and the jar has been narrating all along."
   }
 ]
