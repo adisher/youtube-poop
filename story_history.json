@@ -761,5 +761,12 @@
     "genre": "folktale retold in a modern city",
     "title": "The Train That Dreamed Of Wheels",
     "premise": "Aboard a train that never stops, Grandma Luma learns to skateboard and photographs the train's secret dream with her dream-camera, and one giant sneeze turns every rail into a wheel so the whole city can roll home."
+  },
+  {
+    "date": "2026-11-24",
+    "slot": "evening",
+    "genre": "space exploration wonder",
+    "title": "The Paper Plane That Taught The Baker",
+    "premise": "A paper airplane courier at a floating market discovers the missing ingredient in Comet Cake is a laugh, and teaches the grumpy old baker how to fold a paper plane to find it."
   }
 ]
