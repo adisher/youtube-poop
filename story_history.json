@@ -789,5 +789,12 @@
     "genre": "inventor's breakthrough",
     "title": "The Mapmaker Who Rang Silence",
     "premise": "A homebound mapmaker at a mountain observatory invents a map of silence that finally lets the bell nobody can ring answer."
+  },
+  {
+    "date": "2026-11-25",
+    "slot": "evening",
+    "genre": "inventor's breakthrough",
+    "title": "The Clock Girl's Second Wing",
+    "premise": "A clock-repair girl in a turtle-borne city builds mismatched wings to reach the sky clock, and a stranger's missing wing reveals a family secret."
   }
 ]
