@@ -782,5 +782,12 @@
     "genre": "space exploration wonder",
     "title": "The Mapmaker Who Drew A Door",
     "premise": "A homebound mapmaker uses an un-erasable pencil to draw a lost star home, only to discover her map was the door all along."
+  },
+  {
+    "date": "2026-11-25",
+    "slot": "evening",
+    "genre": "inventor's breakthrough",
+    "title": "The Mapmaker Who Rang Silence",
+    "premise": "A homebound mapmaker at a mountain observatory invents a map of silence that finally lets the bell nobody can ring answer."
   }
 ]
