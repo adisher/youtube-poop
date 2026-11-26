@@ -803,5 +803,12 @@
     "genre": "inventor's breakthrough",
     "title": "The Baker Who Mailed Tomorrow",
     "premise": "A night baker aboard a never-stopping train invents a glowing loaf to deliver a letter addressed to the future, only to discover the stranger who supplies the missing yeast is her granddaughter."
+  },
+  {
+    "date": "2026-11-26",
+    "slot": "evening",
+    "genre": "heartwarming slice of life",
+    "title": "The Recipe Missing One Step",
+    "premise": "A homebound mapmaker receives a waterlogged recipe from an underwater post office and discovers its missing ingredient is a single step outside."
   }
 ]
