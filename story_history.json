@@ -824,5 +824,12 @@
     "genre": "heartwarming slice of life",
     "title": "The Stamp Shop That Mailed Spring",
     "premise": "In a forest where every tree hums, a tiny stamp-shop keeper mails a glowing seed to deliver spring, and the seed tells the tale."
+  },
+  {
+    "date": "2026-11-27",
+    "slot": "evening",
+    "genre": "cozy mystery with a clever reveal",
+    "title": "Who Lights The Lanterns At Dawn?",
+    "premise": "A forgotten brass prototype beneath a floating market follows a key with no door to solve the mystery of the self-lighting lanterns, then teaches his forgetful maker how to glow again."
   }
 ]
