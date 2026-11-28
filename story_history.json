@@ -1,13 +1,6 @@
 [
   {
     "date": "2026-10-19",
-    "slot": "afternoon",
-    "genre": "inventor's breakthrough",
-    "title": "The Day A Boy Who Collects Lost Socks Found A Camera That Photographs Dreams",
-    "premise": "A boy who collects lost socks in a village inside a whale discovers a camera that photographs dreams, and the stranger is family."
-  },
-  {
-    "date": "2026-10-19",
     "slot": "evening",
     "genre": "unlikely friendship",
     "title": "Cloud Who Wanted To Be Mountain",
@@ -838,5 +831,12 @@
     "genre": "cozy mystery with a clever reveal",
     "title": "The Backwards Clock's Blank Room",
     "premise": "A homebound mapmaker follows a backwards clock into a hospital for broken toys and discovers the missing room is the simple game that can mend them all."
+  },
+  {
+    "date": "2026-11-28",
+    "slot": "evening",
+    "genre": "magical realism",
+    "title": "The Seed Inside The Broken Clock",
+    "premise": "A clock-repair girl at a mountain observatory finds a glowing seed inside a broken clock and must choose whether to wind it or plant it when a stranger arrives claiming to be family."
   }
 ]
