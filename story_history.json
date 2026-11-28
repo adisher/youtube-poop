@@ -3,13 +3,6 @@
     "date": "2026-10-19",
     "slot": "evening",
     "genre": "unlikely friendship",
-    "title": "Cloud Who Wanted To Be Mountain",
-    "premise": "A dreaming cloud befriends a talking pebble that guides him to realize he already carries the strength of a mountain within."
-  },
-  {
-    "date": "2026-10-19",
-    "slot": "evening",
-    "genre": "unlikely friendship",
     "title": "The Toy Hospital's Missing Ingredient",
     "premise": "Nell loses a bet to her twin, befriends a patched puppet at a hospital for broken toys, and discovers that caring\u2014not magic\u2014is the missing ingredient in a mending recipe."
   },
@@ -838,5 +831,12 @@
     "genre": "magical realism",
     "title": "The Seed Inside The Broken Clock",
     "premise": "A clock-repair girl at a mountain observatory finds a glowing seed inside a broken clock and must choose whether to wind it or plant it when a stranger arrives claiming to be family."
+  },
+  {
+    "date": "2026-11-28",
+    "slot": "evening",
+    "genre": "magical realism",
+    "title": "The Robot Who Sneeze-Sang A Forest",
+    "premise": "A robot gardener in a humming forest builds mismatched wings to wake a silent tree, but a ticklish wrong note makes him sneeze a seed that solves everything."
   }
 ]
